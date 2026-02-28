@@ -34,12 +34,48 @@ const EPISODE_SPLIT_BOUNDARY_SUFFIX = `
 3. If boundaries cannot be located reliably, return an empty episodes array.`
 
 function cleanJsonStringForParse(input: string): string {
-  return input.replace(/"([^"\\]|\\.)*"/g, (match) => {
-    return match
-      .replace(/(?<!\\)\n/g, '\\n')
-      .replace(/(?<!\\)\r/g, '\\r')
-      .replace(/(?<!\\)\t/g, '\\t')
-  })
+  // Step 1: Escape unescaped control characters inside JSON string values
+  let result = ''
+  let inString = false
+  let escape = false
+
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i]
+
+    if (escape) {
+      result += ch
+      escape = false
+      continue
+    }
+
+    if (ch === '\\' && inString) {
+      escape = true
+      result += ch
+      continue
+    }
+
+    if (ch === '"') {
+      inString = !inString
+      result += ch
+      continue
+    }
+
+    if (inString) {
+      // Escape control characters inside strings
+      if (ch === '\n') { result += '\\n'; continue }
+      if (ch === '\r') { result += '\\r'; continue }
+      if (ch === '\t') { result += '\\t'; continue }
+      // eslint-disable-next-line no-control-regex
+      if (/[\x00-\x1f]/.test(ch)) { result += '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0'); continue }
+    }
+
+    result += ch
+  }
+
+  // Step 2: Remove trailing commas before } or ]
+  result = result.replace(/,\s*([\]}])/g, '$1')
+
+  return result
 }
 
 function parseSplitResponse(aiResponse: string): SplitResponse {
@@ -48,8 +84,21 @@ function parseSplitResponse(aiResponse: string): SplitResponse {
     throw new Error('Failed to parse AI response: missing JSON payload')
   }
 
-  const jsonText = cleanJsonStringForParse(jsonMatch[1] || jsonMatch[0])
-  const parsed = JSON.parse(jsonText) as SplitResponse
+  const rawJson = jsonMatch[1] || jsonMatch[0]
+
+  // Try parsing raw first, then with cleanup
+  let parsed: SplitResponse | null = null
+  try {
+    parsed = JSON.parse(rawJson) as SplitResponse
+  } catch {
+    const cleaned = cleanJsonStringForParse(rawJson)
+    try {
+      parsed = JSON.parse(cleaned) as SplitResponse
+    } catch (e2) {
+      throw new Error(`Failed to parse AI JSON response: ${(e2 as Error).message}. Raw length: ${rawJson.length}`)
+    }
+  }
+
   if (!parsed || !Array.isArray(parsed.episodes) || parsed.episodes.length === 0) {
     throw new Error('Failed to parse AI response: invalid episodes payload')
   }
