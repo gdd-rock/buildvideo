@@ -1,25 +1,12 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#6366f1"/>
-      <stop offset="100%" style="stop-color:#8b5cf6"/>
-    </linearGradient>
-    <linearGradient id="play" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#ffffff"/>
-      <stop offset="100%" style="stop-color:#e0e7ff"/>
+      <stop offset="0%" style="stop-color:#4f46e5"/>
+      <stop offset="100%" style="stop-color:#7c3aed"/>
     </linearGradient>
   </defs>
   <!-- Rounded square background -->
-  <rect x="16" y="16" width="480" height="480" rx="96" ry="96" fill="url(#bg)"/>
-  <!-- Film strip accent lines -->
-  <rect x="80" y="80" width="32" height="32" rx="4" fill="rgba(255,255,255,0.2)"/>
-  <rect x="80" y="132" width="32" height="32" rx="4" fill="rgba(255,255,255,0.2)"/>
-  <rect x="80" y="184" width="32" height="32" rx="4" fill="rgba(255,255,255,0.15)"/>
-  <rect x="400" y="296" width="32" height="32" rx="4" fill="rgba(255,255,255,0.15)"/>
-  <rect x="400" y="348" width="32" height="32" rx="4" fill="rgba(255,255,255,0.2)"/>
-  <rect x="400" y="400" width="32" height="32" rx="4" fill="rgba(255,255,255,0.2)"/>
-  <!-- Play triangle -->
-  <path d="M200 148 L380 256 L200 364 Z" fill="url(#play)" opacity="0.95"/>
-  <!-- Subtle build/gear accent -->
-  <circle cx="290" cy="256" r="40" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="6" stroke-dasharray="12 8"/>
+  <rect x="32" y="32" width="448" height="448" rx="80" ry="80" fill="url(#bg)"/>
+  <!-- Play triangle - centered, clean -->
+  <path d="M210 160 L370 256 L210 352 Z" fill="#ffffff" opacity="0.95"/>
 </svg>

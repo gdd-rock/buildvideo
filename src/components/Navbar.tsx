@@ -19,11 +19,11 @@ export default function Navbar() {
           <div className="flex items-center gap-2">
             <Link href={session ? "/workspace" : "/"} className="group">
               <Image
-                src="/logo-small.png?v=1"
+                src="/logo-small.png?v=2"
                 alt={tc('appName')}
-                width={80}
-                height={80}
-                className="object-contain transition-transform group-hover:scale-110"
+                width={36}
+                height={36}
+                className="object-contain transition-transform group-hover:scale-110 rounded-lg"
               />
             </Link>
             <span className="glass-chip glass-chip-info px-2.5 py-1 text-[11px]">
