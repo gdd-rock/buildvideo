@@ -1,0 +1,69 @@
+{
+  "sidebar": {
+    "title": "管理后台",
+    "dashboard": "仪表盘",
+    "users": "用户管理",
+    "projects": "项目管理",
+    "tasks": "任务监控"
+  },
+  "dashboard": {
+    "title": "系统概览",
+    "totalUsers": "总用户数",
+    "totalProjects": "总项目数",
+    "totalTasks": "总任务数",
+    "activeUsers": "活跃用户(7天)",
+    "recentUsers": "最近注册用户",
+    "recentTasks": "最近任务"
+  },
+  "users": {
+    "title": "用户管理",
+    "name": "用户名",
+    "email": "邮箱",
+    "role": "角色",
+    "projects": "项目数",
+    "createdAt": "注册时间",
+    "status": "状态",
+    "actions": "操作",
+    "active": "正常",
+    "disabled": "已禁用",
+    "admin": "管理员",
+    "user": "普通用户",
+    "setAdmin": "设为管理员",
+    "removeAdmin": "取消管理员",
+    "disable": "禁用",
+    "enable": "启用",
+    "search": "搜索用户名或邮箱...",
+    "confirmDisable": "确定要禁用该用户吗？",
+    "confirmAdmin": "确定要将该用户设为管理员吗？"
+  },
+  "projects": {
+    "title": "项目管理",
+    "name": "项目名称",
+    "owner": "所属用户",
+    "createdAt": "创建时间",
+    "usageCosts": "用量记录",
+    "search": "搜索项目名称..."
+  },
+  "tasks": {
+    "title": "任务监控",
+    "type": "任务类型",
+    "status": "状态",
+    "user": "用户",
+    "createdAt": "创建时间",
+    "duration": "耗时",
+    "all": "全部",
+    "pending": "等待中",
+    "running": "运行中",
+    "completed": "已完成",
+    "failed": "失败"
+  },
+  "common": {
+    "noData": "暂无数据",
+    "loading": "加载中...",
+    "prev": "上一页",
+    "next": "下一页",
+    "page": "第 {current} / {total} 页",
+    "accessDenied": "无权访问",
+    "accessDeniedDesc": "您没有管理员权限，请联系管理员。"
+  }
+}

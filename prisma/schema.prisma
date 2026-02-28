@@ -402,6 +402,8 @@ model User {
   emailVerified DateTime?
   image         String?
   password      String?
+  role          String          @default("USER")
+  disabled      Boolean         @default(false)
   createdAt     DateTime        @default(now())
   updatedAt     DateTime        @default(now()) @updatedAt
   accounts      Account[]

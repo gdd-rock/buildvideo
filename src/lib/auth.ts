@@ -44,11 +44,17 @@ export const authOptions: any = {
           return null
         }
 
+        if (user.disabled) {
+          logAuthAction('LOGIN', credentials.username, { error: 'Account disabled' })
+          return null
+        }
+
         logAuthAction('LOGIN', user.name, { userId: user.id, success: true })
 
         return {
           id: user.id,
           name: user.name,
+          role: user.role || 'USER',
         }
       }
     })
@@ -64,6 +70,7 @@ export const authOptions: any = {
     async jwt({ token, user }: any) {
       if (user) {
         token.id = user.id
+        token.role = user.role || 'USER'
       }
       return token
     },
@@ -71,6 +78,7 @@ export const authOptions: any = {
     async session({ session, token }: any) {
       if (token && session.user) {
         session.user.id = token.id as string
+        session.user.role = (token.role as string) || 'USER'
       }
       return session
     }

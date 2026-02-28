@@ -1,0 +1,69 @@
+{
+  "sidebar": {
+    "title": "Admin Panel",
+    "dashboard": "Dashboard",
+    "users": "Users",
+    "projects": "Projects",
+    "tasks": "Tasks"
+  },
+  "dashboard": {
+    "title": "System Overview",
+    "totalUsers": "Total Users",
+    "totalProjects": "Total Projects",
+    "totalTasks": "Total Tasks",
+    "activeUsers": "Active Users (7d)",
+    "recentUsers": "Recent Users",
+    "recentTasks": "Recent Tasks"
+  },
+  "users": {
+    "title": "User Management",
+    "name": "Username",
+    "email": "Email",
+    "role": "Role",
+    "projects": "Projects",
+    "createdAt": "Registered",
+    "status": "Status",
+    "actions": "Actions",
+    "active": "Active",
+    "disabled": "Disabled",
+    "admin": "Admin",
+    "user": "User",
+    "setAdmin": "Set Admin",
+    "removeAdmin": "Remove Admin",
+    "disable": "Disable",
+    "enable": "Enable",
+    "search": "Search username or email...",
+    "confirmDisable": "Are you sure you want to disable this user?",
+    "confirmAdmin": "Are you sure you want to set this user as admin?"
+  },
+  "projects": {
+    "title": "Project Management",
+    "name": "Project Name",
+    "owner": "Owner",
+    "createdAt": "Created",
+    "usageCosts": "Usage",
+    "search": "Search project name..."
+  },
+  "tasks": {
+    "title": "Task Monitor",
+    "type": "Type",
+    "status": "Status",
+    "user": "User",
+    "createdAt": "Created",
+    "duration": "Duration",
+    "all": "All",
+    "pending": "Pending",
+    "running": "Running",
+    "completed": "Completed",
+    "failed": "Failed"
+  },
+  "common": {
+    "noData": "No data",
+    "loading": "Loading...",
+    "prev": "Previous",
+    "next": "Next",
+    "page": "Page {current} / {total}",
+    "accessDenied": "Access Denied",
+    "accessDeniedDesc": "You do not have admin privileges. Please contact an administrator."
+  }
+}

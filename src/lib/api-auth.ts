@@ -22,6 +22,7 @@ export interface AuthSession {
         id: string
         name?: string | null
         email?: string | null
+        role?: string
     }
 }
 
@@ -305,6 +306,22 @@ export async function requireUserAuth(): Promise<{ session: AuthSession } | Next
     const session = await getAuthSession()
     if (!session?.user?.id) {
         return unauthorized()
+    }
+    bindAuthLogContext(session)
+    return { session }
+}
+
+/**
+ * 要求管理员权限
+ * 适用于管理后台 API
+ */
+export async function requireAdminAuth(): Promise<{ session: AuthSession } | NextResponse> {
+    const session = await getAuthSession()
+    if (!session?.user?.id) {
+        return unauthorized()
+    }
+    if (session.user.role !== 'ADMIN') {
+        return forbidden('Admin access required')
     }
     bindAuthLogContext(session)
     return { session }
