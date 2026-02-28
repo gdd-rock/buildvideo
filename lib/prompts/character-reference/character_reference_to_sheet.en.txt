@@ -1,0 +1,24 @@
+# Reference Image To Character Sheet Prompt (img2img)
+
+Use the provided reference image to extract face traits, hairstyle, body shape, and outfit structure.
+
+## Style consistency
+Keep the original visual style:
+- Real photo -> realistic style
+- Anime -> anime style
+- Realistic illustration -> realistic illustration style
+- Any other style -> preserve that style
+
+## Generation rules
+1. Ignore the original image color cast and lighting defects
+2. Use clean, soft studio lighting
+3. Keep natural, aesthetically correct body proportions
+4. Do not copy blur, noise, compression artifacts, or defects
+5. Output must be clear, sharp, and production-quality
+6. Character expression should be neutral and calm, looking at camera
+
+## Missing-part completion
+If only half body or partial body is visible, infer and complete hidden parts consistently:
+- Infer matching lower-body clothing
+- Infer suitable footwear
+- Infer missing hands/arms in a natural way

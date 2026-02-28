@@ -1,0 +1,73 @@
+{
+  "title": "BuildVideo",
+  "subtitle": "AI影视Studio",
+  "heroDescription": "用AI将你的故事变成精彩的动漫视频。从剧本到成片，几分钟搞定。",
+  "enterWorkspace": "进入工作区",
+  "getStarted": "免费开始",
+  "learnMore": "了解更多",
+  "features": {
+    "title": "释放无限创造力",
+    "subtitle": "全流程 AI 辅助，从剧本到成片",
+    "script": {
+      "title": "AI 剧本分析",
+      "description": "粘贴小说或剧本，AI自动提取角色、场景、情节结构，生成专业拍摄脚本。"
+    },
+    "character": {
+      "title": "角色工坊",
+      "description": "打造独一无二的动漫角色，AI在每个场景和镜头中保持角色形象高度一致。"
+    },
+    "storyboard": {
+      "title": "智能分镜",
+      "description": "文字一键转分镜，AI自动生成镜头角度、构图和镜头序列，精准把控叙事节奏。"
+    },
+    "world": {
+      "title": "世界构建",
+      "description": "沉浸式场景生成，构建与你创意愿景匹配的宏大故事背景。"
+    },
+    "voice": {
+      "title": "AI 语音合成",
+      "description": "多角色配音，自然情感表达。选择多样化音色或自定义角色声音。"
+    },
+    "video": {
+      "title": "视频合成",
+      "description": "自动进行视频合成，包含转场、字幕、口型同步和背景音乐。导出即可发布的内容。"
+    }
+  },
+  "workflow": {
+    "title": "4步完成从故事到视频",
+    "subtitle": "AI流水线处理复杂的制作工作",
+    "step1": {
+      "title": "导入剧本",
+      "description": "粘贴你的小说、剧本或创意文本"
+    },
+    "step2": {
+      "title": "AI 分析",
+      "description": "自动生成角色、场景和分镜"
+    },
+    "step3": {
+      "title": "自定义调整",
+      "description": "微调画面、配音和节奏"
+    },
+    "step4": {
+      "title": "导出视频",
+      "description": "下载完整的动画视频"
+    }
+  },
+  "stats": {
+    "providers": "7+ 图像AI提供商",
+    "videoProviders": "6+ 视频AI提供商",
+    "languages": "中英双语",
+    "openSource": "100% 开源"
+  },
+  "cta": {
+    "title": "准备好了吗？",
+    "subtitle": "立即开始用AI制作视频，无需信用卡。",
+    "button": "开始创作"
+  },
+  "footer": {
+    "copyright": "2026 BuildVideo. All rights reserved.",
+    "description": "开源AI视频制作平台",
+    "github": "GitHub",
+    "docs": "文档"
+  }
+}

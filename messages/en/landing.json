@@ -1,0 +1,73 @@
+{
+  "title": "BuildVideo",
+  "subtitle": "AI Film & TV Studio",
+  "heroDescription": "Transform your stories into stunning anime videos with AI. From script to screen in minutes, not months.",
+  "enterWorkspace": "Enter Workspace",
+  "getStarted": "Get Started Free",
+  "learnMore": "Learn More",
+  "features": {
+    "title": "Unleash Infinite Creativity",
+    "subtitle": "Full-process AI assistance, from script to final cut",
+    "script": {
+      "title": "AI Script Analysis",
+      "description": "Paste your novel or script — AI automatically extracts characters, locations, plot structure, and generates a professional shooting script."
+    },
+    "character": {
+      "title": "Character Workshop",
+      "description": "Create unique, consistent anime characters. AI maintains visual identity across every scene and shot."
+    },
+    "storyboard": {
+      "title": "Smart Storyboard",
+      "description": "One-click text to storyboard. AI generates camera angles, compositions, and shot sequences with precise narrative control."
+    },
+    "world": {
+      "title": "World Building",
+      "description": "Generate immersive scenes and environments. Build grand story backgrounds that match your creative vision."
+    },
+    "voice": {
+      "title": "AI Voice Synthesis",
+      "description": "Multi-character voice acting with natural emotion. Choose from diverse voices or design custom character voices."
+    },
+    "video": {
+      "title": "Video Assembly",
+      "description": "Automatic video composition with transitions, subtitles, lip-sync, and background music. Export ready-to-publish content."
+    }
+  },
+  "workflow": {
+    "title": "From Story to Screen in 4 Steps",
+    "subtitle": "Our AI pipeline handles the complex production work",
+    "step1": {
+      "title": "Import Script",
+      "description": "Paste your novel, screenplay, or creative text"
+    },
+    "step2": {
+      "title": "AI Analysis",
+      "description": "Characters, scenes, and storyboards generated automatically"
+    },
+    "step3": {
+      "title": "Customize & Refine",
+      "description": "Fine-tune visuals, voices, and timing to your liking"
+    },
+    "step4": {
+      "title": "Export Video",
+      "description": "Download your complete animated video"
+    }
+  },
+  "stats": {
+    "providers": "7+ Image AI Providers",
+    "videoProviders": "6+ Video AI Providers",
+    "languages": "Bilingual (EN/ZH)",
+    "openSource": "100% Open Source"
+  },
+  "cta": {
+    "title": "Ready to Create?",
+    "subtitle": "Start building your AI-powered video today. No credit card required.",
+    "button": "Start Creating"
+  },
+  "footer": {
+    "copyright": "2026 BuildVideo. All rights reserved.",
+    "description": "Open-source AI video production platform",
+    "github": "GitHub",
+    "docs": "Documentation"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "globalAssets": "全局资产",
+  "createFailed": "创建失败",
+  "deleteFailed": "删除失败",
+  "renameFailed": "重命名失败",
+  "refreshFailed": "刷新失败",
+  "projectNotFound": "项目不存在",
+  "backToWorkspace": "返回工作区",
+  "episode": "剧集",
+  "sidebar": {
+    "dragToMove": "拖动调整位置",
+    "listTitle": "剧集列表",
+    "episodeCount": "{count}集",
+    "empty": "暂无剧集，点击下方创建",
+    "save": "保存",
+    "deleteConfirm": "确定删除「{name}」？",
+    "delete": "删除",
+    "cancel": "取消",
+    "rename": "重命名",
+    "newEpisodePlaceholder": "输入剧集名称...",
+    "create": "创建",
+    "addEpisode": "添加剧集"
+  }
+}

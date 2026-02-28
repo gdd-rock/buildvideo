@@ -1,0 +1,24 @@
+{
+  "globalAssets": "Global Assets",
+  "createFailed": "Creation failed",
+  "deleteFailed": "Deletion failed",
+  "renameFailed": "Rename failed",
+  "refreshFailed": "Refresh failed",
+  "projectNotFound": "Project not found",
+  "backToWorkspace": "Back to Workspace",
+  "episode": "Episode",
+  "sidebar": {
+    "dragToMove": "Drag to move position",
+    "listTitle": "Episode List",
+    "episodeCount": "{count} episodes",
+    "empty": "No episodes yet. Create one below.",
+    "save": "Save",
+    "deleteConfirm": "Delete \"{name}\"?",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "rename": "Rename",
+    "newEpisodePlaceholder": "Enter episode name...",
+    "create": "Create",
+    "addEpisode": "Add Episode"
+  }
+}
