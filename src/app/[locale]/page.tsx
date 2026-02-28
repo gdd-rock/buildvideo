@@ -4,6 +4,7 @@ import { useTranslations } from 'next-intl'
 import Link from 'next/link'
 import { useSession } from 'next-auth/react'
 import Navbar from '@/components/Navbar'
+import { AppIcon, type AppIconName } from '@/components/ui/icons'
 
 const jsonLd = {
   '@context': 'https://schema.org',
@@ -20,27 +21,37 @@ const jsonLd = {
   },
 }
 
-const featureIcons: Record<string, string> = {
-  script: 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z',
-  character: 'M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z',
-  storyboard: 'M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zm0 8a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zm10 0a1 1 0 011-1h4a1 1 0 011 1v6a1 1 0 01-1 1h-4a1 1 0 01-1-1v-6z',
-  world: 'M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z',
-  voice: 'M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z',
-  video: 'M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z',
+const featureIcons: Record<string, AppIconName> = {
+  script: 'fileText',
+  character: 'userCircle',
+  storyboard: 'film',
+  world: 'globe',
+  voice: 'mic',
+  video: 'video',
 }
 
-function FeatureIcon({ path }: { path: string }) {
-  return (
-    <svg className="w-7 h-7" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-      <path strokeLinecap="round" strokeLinejoin="round" d={path} />
-    </svg>
-  )
+const powerIcons: Record<string, AppIconName> = {
+  agents: 'cpu',
+  prompts: 'fileText',
+  providers: 'cube',
+  queues: 'bolt',
 }
+
+const providerIcons: Record<string, AppIconName> = {
+  image: 'image',
+  video: 'clapperboard',
+  voice: 'audioWave',
+  llm: 'brain',
+}
+
+const selfhostIcons: AppIconName[] = ['globe', 'lock', 'bolt', 'diamond']
 
 export default function Home() {
   const t = useTranslations('landing')
   const { data: session } = useSession()
   const features = ['script', 'character', 'storyboard', 'world', 'voice', 'video'] as const
+  const powerItems = ['agents', 'prompts', 'providers', 'queues'] as const
+  const providerCategories = ['image', 'video', 'voice', 'llm'] as const
 
   return (
     <div className="glass-page min-h-screen overflow-hidden font-sans selection:bg-[var(--glass-tone-info-bg)]">
@@ -62,6 +73,13 @@ export default function Home() {
         <section className="relative min-h-screen flex items-center justify-center -mt-16 px-4">
           <div className="container mx-auto grid lg:grid-cols-2 gap-16 items-center">
             <div className="text-left space-y-8 animate-slide-up" style={{ animationDuration: '0.8s' }}>
+              <div className="animate-fade-in" style={{ animationDelay: '0.1s' }}>
+                <span className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full text-sm font-medium bg-[var(--glass-tone-info-bg)] text-[var(--glass-tone-info-fg)] border border-[var(--glass-stroke-soft)]">
+                  <AppIcon name="sparkles" className="w-4 h-4" />
+                  {t('heroBadge')}
+                </span>
+              </div>
+
               <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] animate-fade-in" style={{ animationDelay: '0.2s' }}>
                 <span className="block text-[var(--glass-text-primary)]">
                   {t('title')}
@@ -129,13 +147,32 @@ export default function Home() {
           </div>
         </section>
 
-        {/* Stats Bar */}
-        <section className="py-12 border-y border-[var(--glass-stroke-soft)]">
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-              {(['providers', 'videoProviders', 'languages', 'openSource'] as const).map((key) => (
-                <div key={key} className="space-y-1">
-                  <p className="text-lg md:text-xl font-semibold text-[var(--glass-text-primary)]">{t(`stats.${key}`)}</p>
+        {/* Power Stats Section */}
+        <section className="py-20 px-4 border-y border-[var(--glass-stroke-soft)]">
+          <div className="container mx-auto">
+            <div className="text-center mb-12 space-y-4">
+              <h2 className="text-3xl md:text-5xl font-bold text-[var(--glass-text-primary)]">
+                {t('power.title')}
+              </h2>
+              <p className="text-lg text-[var(--glass-text-secondary)] max-w-2xl mx-auto">
+                {t('power.subtitle')}
+              </p>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {powerItems.map((key) => (
+                <div key={key} className="glass-surface rounded-2xl p-8 text-center space-y-3 transition-all duration-300 hover:scale-[1.03]">
+                  <div className="w-12 h-12 mx-auto rounded-xl bg-[var(--glass-tone-info-bg)] text-[var(--glass-tone-info-fg)] flex items-center justify-center">
+                    <AppIcon name={powerIcons[key]} className="w-6 h-6" />
+                  </div>
+                  <p className="text-4xl md:text-5xl font-bold text-[var(--glass-tone-info-fg)]">
+                    {t(`power.items.${key}.number`)}
+                  </p>
+                  <p className="text-base font-semibold text-[var(--glass-text-primary)]">
+                    {t(`power.items.${key}.label`)}
+                  </p>
+                  <p className="text-sm text-[var(--glass-text-secondary)]">
+                    {t(`power.items.${key}.desc`)}
+                  </p>
                 </div>
               ))}
             </div>
@@ -161,13 +198,40 @@ export default function Home() {
                   className="glass-surface rounded-2xl p-8 space-y-4 transition-all duration-300 hover:scale-[1.02] hover:shadow-lg"
                 >
                   <div className="w-14 h-14 rounded-xl bg-[var(--glass-tone-info-bg)] text-[var(--glass-tone-info-fg)] flex items-center justify-center">
-                    <FeatureIcon path={featureIcons[key]} />
+                    <AppIcon name={featureIcons[key]} className="w-7 h-7" />
                   </div>
                   <h3 className="text-xl font-semibold text-[var(--glass-text-primary)]">
                     {t(`features.${key}.title`)}
                   </h3>
                   <p className="text-[var(--glass-text-secondary)] leading-relaxed">
                     {t(`features.${key}.description`)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Providers Section */}
+        <section className="py-24 px-4 border-t border-[var(--glass-stroke-soft)]">
+          <div className="container mx-auto">
+            <div className="text-center mb-16 space-y-4">
+              <h2 className="text-3xl md:text-5xl font-bold text-[var(--glass-text-primary)]">
+                {t('providers.title')}
+              </h2>
+              <p className="text-lg text-[var(--glass-text-secondary)] max-w-2xl mx-auto">
+                {t('providers.subtitle')}
+              </p>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              {providerCategories.map((key) => (
+                <div key={key} className="glass-surface rounded-2xl p-6 flex items-start gap-4 transition-all duration-300 hover:scale-[1.01]">
+                  <div className="w-12 h-12 shrink-0 rounded-xl bg-[var(--glass-tone-info-bg)] text-[var(--glass-tone-info-fg)] flex items-center justify-center">
+                    <AppIcon name={providerIcons[key]} className="w-6 h-6" />
+                  </div>
+                  <p className="text-[var(--glass-text-secondary)] leading-relaxed pt-2.5">
+                    {t(`providers.${key}`)}
                   </p>
                 </div>
               ))}
@@ -208,6 +272,42 @@ export default function Home() {
           </div>
         </section>
 
+        {/* Self-Host Section */}
+        <section className="py-24 px-4 border-t border-[var(--glass-stroke-soft)]">
+          <div className="container mx-auto">
+            <div className="glass-surface-modal rounded-3xl p-12 md:p-16 relative overflow-hidden">
+              <div className="absolute inset-0 bg-[radial-gradient(800px_400px_at_20%_80%,rgba(99,102,241,0.08),transparent)]"></div>
+              <div className="relative z-10 grid lg:grid-cols-2 gap-12 items-center">
+                <div className="space-y-6">
+                  <h2 className="text-3xl md:text-4xl font-bold text-[var(--glass-text-primary)]">
+                    {t('selfhost.title')}
+                  </h2>
+                  <p className="text-lg text-[var(--glass-text-secondary)] leading-relaxed">
+                    {t('selfhost.subtitle')}
+                  </p>
+                  <div className="glass-surface rounded-xl p-4 font-mono text-sm text-[var(--glass-tone-info-fg)] flex items-center gap-3">
+                    <span className="text-[var(--glass-text-tertiary)]">$</span>
+                    <code>{t('selfhost.docker')}</code>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  {([1, 2, 3, 4] as const).map((n, i) => (
+                    <div key={n} className="glass-surface rounded-xl p-5 space-y-2 text-center">
+                      <div className="w-10 h-10 mx-auto rounded-lg bg-[var(--glass-tone-info-bg)] text-[var(--glass-tone-info-fg)] flex items-center justify-center">
+                        <AppIcon name={selfhostIcons[i]} className="w-5 h-5" />
+                      </div>
+                      <p className="text-sm font-semibold text-[var(--glass-text-primary)]">
+                        {t(`selfhost.feature${n}`)}
+                      </p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         {/* CTA Section */}
         <section className="py-24 px-4">
           <div className="container mx-auto">
@@ -220,13 +320,22 @@ export default function Home() {
                 <p className="text-lg text-[var(--glass-text-secondary)] max-w-xl mx-auto">
                   {t('cta.subtitle')}
                 </p>
-                <div className="pt-4">
+                <div className="flex flex-wrap justify-center gap-4 pt-4">
                   <Link
                     href={session ? '/workspace' : '/auth/signup'}
                     className="glass-btn-base glass-btn-primary px-10 py-4 rounded-xl font-semibold text-lg transition-all duration-300 inline-block"
                   >
                     {t('cta.button')}
                   </Link>
+                  <a
+                    href="https://github.com/BuildVideoAI/buildvideo"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="glass-btn-base px-10 py-4 rounded-xl font-semibold text-lg transition-all duration-300 inline-flex items-center gap-2 border border-[var(--glass-stroke-base)] text-[var(--glass-text-secondary)] hover:text-[var(--glass-text-primary)]"
+                  >
+                    <AppIcon name="externalLink" className="w-5 h-5" />
+                    {t('cta.github')}
+                  </a>
                 </div>
               </div>
             </div>

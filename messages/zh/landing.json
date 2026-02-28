@@ -1,68 +1,107 @@
 {
   "title": "BuildVideo",
-  "subtitle": "AI影视Studio",
-  "heroDescription": "用AI将你的故事变成精彩的动漫视频。从剧本到成片，几分钟搞定。",
+  "subtitle": "AI影视制作工作台",
+  "heroDescription": "最强大的开源AI视频制作流水线。粘贴你的故事，获得完整动画视频 — 角色、分镜、配音、成片，全部由AI Agent自动生成。",
   "enterWorkspace": "进入工作区",
-  "getStarted": "免费开始",
-  "learnMore": "了解更多",
+  "getStarted": "免费开始创作",
+  "learnMore": "了解工作原理",
+  "heroBadge": "开源 & 私有部署",
   "features": {
-    "title": "释放无限创造力",
-    "subtitle": "全流程 AI 辅助，从剧本到成片",
+    "title": "端到端AI制作流水线",
+    "subtitle": "6个专业AI Agent并行工作，将文字变成可播出的视频内容",
     "script": {
-      "title": "AI 剧本分析",
-      "description": "粘贴小说或剧本，AI自动提取角色、场景、情节结构，生成专业拍摄脚本。"
+      "title": "AI剧本分析引擎",
+      "description": "支持Claude、GPT-4、Gemini等模型（通过OpenRouter）。自动将小说解析为结构化剧本 — 秒级提取角色、场景、情绪、镜头指令和对白。"
     },
     "character": {
-      "title": "角色工坊",
-      "description": "打造独一无二的动漫角色，AI在每个场景和镜头中保持角色形象高度一致。"
+      "title": "一致性角色生成",
+      "description": "对接7+图像提供商（Midjourney、DALL-E、Stable Diffusion、即梦、Flux等）。AI在数百个镜头中严格保持角色视觉一致性。"
     },
     "storyboard": {
-      "title": "智能分镜",
-      "description": "文字一键转分镜，AI自动生成镜头角度、构图和镜头序列，精准把控叙事节奏。"
+      "title": "四阶段智能分镜",
+      "description": "规划 → 摄影 → 表演指导 → 补充细节。每个镜头都有AI生成的构图、机位、光线和角色调度。"
     },
     "world": {
-      "title": "世界构建",
-      "description": "沉浸式场景生成，构建与你创意愿景匹配的宏大故事背景。"
+      "title": "世界观与场景构建",
+      "description": "从文字描述生成一致性环境。AI构建场景库，确保整部作品视觉风格统一。"
     },
     "voice": {
-      "title": "AI 语音合成",
-      "description": "多角色配音，自然情感表达。选择多样化音色或自定义角色声音。"
+      "title": "多角色AI配音",
+      "description": "自然语音合成，支持情感控制。包含声音设计、声音克隆和多角色对话。集成口型同步用于角色动画。"
     },
     "video": {
-      "title": "视频合成",
-      "description": "自动进行视频合成，包含转场、字幕、口型同步和背景音乐。导出即可发布的内容。"
+      "title": "一键视频合成",
+      "description": "对接6+视频提供商（可灵、Runway、即梦视频、Luma、Pika等）。自动合成转场、字幕、背景音乐并导出。"
     }
+  },
+  "power": {
+    "title": "为专业制作而生",
+    "subtitle": "不是玩具Demo — 是生产级流水线",
+    "items": {
+      "agents": {
+        "number": "43",
+        "label": "任务处理器",
+        "desc": "每个环节都有专业AI工作器"
+      },
+      "prompts": {
+        "number": "50+",
+        "label": "提示词模板",
+        "desc": "经过实战检验的中英双语提示词库"
+      },
+      "providers": {
+        "number": "15+",
+        "label": "AI提供商",
+        "desc": "图像、视频、语音和LLM提供商"
+      },
+      "queues": {
+        "number": "4",
+        "label": "并行队列",
+        "desc": "图像、视频、语音、文本同时运行"
+      }
+    }
+  },
+  "providers": {
+    "title": "对接最强AI模型",
+    "subtitle": "使用你自己的API Key — 无厂商锁定",
+    "image": "图像: Midjourney, DALL-E 3, Stable Diffusion, 即梦, Flux, FAL, Google Imagen",
+    "video": "视频: 可灵, Runway, 即梦视频, Luma Dream Machine, Pika, Vidu",
+    "voice": "语音: 自定义TTS, 声音设计 & 克隆",
+    "llm": "LLM: Claude, GPT-4, Gemini, DeepSeek, 通义千问 via OpenRouter"
   },
   "workflow": {
-    "title": "4步完成从故事到视频",
-    "subtitle": "AI流水线处理复杂的制作工作",
+    "title": "4步从故事到成片",
+    "subtitle": "多Agent流水线自动处理整个制作流程",
     "step1": {
-      "title": "导入剧本",
-      "description": "粘贴你的小说、剧本或创意文本"
+      "title": "导入故事",
+      "description": "粘贴小说章节、剧本或任何创意文本。支持中英文。"
     },
     "step2": {
-      "title": "AI 分析",
-      "description": "自动生成角色、场景和分镜"
+      "title": "AI Agent分析",
+      "description": "编剧Agent提取角色、场景和分场。导演Agent规划每个镜头。"
     },
     "step3": {
-      "title": "自定义调整",
-      "description": "微调画面、配音和节奏"
+      "title": "并行生成",
+      "description": "画师、配音、字幕Agent并行工作 — 同时生成画面、语音和文字。"
     },
     "step4": {
-      "title": "导出视频",
-      "description": "下载完整的动画视频"
+      "title": "自动合成导出",
+      "description": "剪辑Agent将所有素材合成为成片，自动添加转场、音乐和字幕。"
     }
   },
-  "stats": {
-    "providers": "7+ 图像AI提供商",
-    "videoProviders": "6+ 视频AI提供商",
-    "languages": "中英双语",
-    "openSource": "100% 开源"
+  "selfhost": {
+    "title": "私有部署。你的数据。你的密钥。",
+    "subtitle": "Docker一键部署，2分钟启动。所有AI API调用直连提供商。无中间商，无数据收集，无使用限制。",
+    "docker": "docker compose up -d",
+    "feature1": "100% 开源 (MIT协议)",
+    "feature2": "使用你自己的API Key",
+    "feature3": "无使用限制和费用",
+    "feature4": "完全数据所有权"
   },
   "cta": {
-    "title": "准备好了吗？",
-    "subtitle": "立即开始用AI制作视频，无需信用卡。",
-    "button": "开始创作"
+    "title": "今天就开始AI视频制作",
+    "subtitle": "免费私有部署，或在线体验。无需信用卡，无厂商锁定，完全掌控。",
+    "button": "免费开始",
+    "github": "GitHub 查看源码"
   },
   "footer": {
     "copyright": "2026 BuildVideo. All rights reserved.",
