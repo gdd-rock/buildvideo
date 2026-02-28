@@ -69,7 +69,6 @@ function cleanJsonStringForParse(input: string): string {
       if (ch === '\n') { result += '\\n'; continue }
       if (ch === '\r') { result += '\\r'; continue }
       if (ch === '\t') { result += '\\t'; continue }
-      // eslint-disable-next-line no-control-regex
       if (/[\x00-\x1f\x7f]/.test(ch)) { result += '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0'); continue }
     }
 
