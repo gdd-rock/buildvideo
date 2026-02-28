@@ -34,13 +34,17 @@ const EPISODE_SPLIT_BOUNDARY_SUFFIX = `
 3. If boundaries cannot be located reliably, return an empty episodes array.`
 
 function cleanJsonStringForParse(input: string): string {
+  // Step 0: Normalize curly/smart quotes to straight quotes (LLMs frequently output these)
+  let normalized = input.replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
+  normalized = normalized.replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
+
   // Step 1: Escape unescaped control characters inside JSON string values
   let result = ''
   let inString = false
   let escape = false
 
-  for (let i = 0; i < input.length; i++) {
-    const ch = input[i]
+  for (let i = 0; i < normalized.length; i++) {
+    const ch = normalized[i]
 
     if (escape) {
       result += ch
@@ -66,7 +70,7 @@ function cleanJsonStringForParse(input: string): string {
       if (ch === '\r') { result += '\\r'; continue }
       if (ch === '\t') { result += '\\t'; continue }
       // eslint-disable-next-line no-control-regex
-      if (/[\x00-\x1f]/.test(ch)) { result += '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0'); continue }
+      if (/[\x00-\x1f\x7f]/.test(ch)) { result += '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0'); continue }
     }
 
     result += ch
