@@ -38,6 +38,10 @@ type ApproximateNormMatch = {
 const APPROX_CONFIDENCE_THRESHOLD = 0.9
 const APPROX_MAX_CANDIDATES = 240
 
+export type TextMarkerMatcherOptions = {
+  approxConfidenceThreshold?: number
+}
+
 const PUNCTUATION_MAP: Record<string, string> = {
   '，': ',',
   '。': '.',
@@ -302,10 +306,10 @@ function levenshteinDistance(a: string, b: string, maxDistance: number): number 
   return prev[bLen]
 }
 
-function scoreApproximateSimilarity(query: string, candidate: string): number {
+function scoreApproximateSimilarity(query: string, candidate: string, threshold: number): number {
   const maxLen = Math.max(query.length, candidate.length)
   if (maxLen === 0) return 0
-  const allowedDistance = Math.floor((1 - APPROX_CONFIDENCE_THRESHOLD) * maxLen)
+  const allowedDistance = Math.floor((1 - threshold) * maxLen)
   if (Math.abs(query.length - candidate.length) > allowedDistance) return 0
   const distance = levenshteinDistance(query, candidate, allowedDistance)
   if (distance > allowedDistance) return 0
@@ -316,6 +320,7 @@ function findApproximateMatch(
   normalized: NormalizedContent,
   query: string,
   fromIndex: number,
+  threshold: number = APPROX_CONFIDENCE_THRESHOLD,
 ): ApproximateNormMatch | null {
   if (query.length < 8) return null
   const fromNorm = findNormIndexForRaw(normalized, fromIndex)
@@ -328,8 +333,8 @@ function findApproximateMatch(
       const endNorm = startNorm + length
       if (endNorm > normalized.text.length) continue
       const candidate = normalized.text.slice(startNorm, endNorm)
-      const confidence = scoreApproximateSimilarity(query, candidate)
-      if (confidence < APPROX_CONFIDENCE_THRESHOLD) continue
+      const confidence = scoreApproximateSimilarity(query, candidate, threshold)
+      if (confidence < threshold) continue
       if (!best || confidence > best.confidence) {
         best = {
           startNorm,
@@ -348,15 +353,16 @@ function tryApproximateNormalizedMatch(
   startQuery: string,
   endQuery: string,
   fromIndex: number,
+  threshold: number = APPROX_CONFIDENCE_THRESHOLD,
 ): ClipBoundaryMatch | null {
-  const startApprox = findApproximateMatch(normalized, startQuery, fromIndex)
+  const startApprox = findApproximateMatch(normalized, startQuery, fromIndex, threshold)
   if (!startApprox) return null
 
   const rawStart = normalized.rawStartByNorm[startApprox.startNorm]
   if (rawStart < fromIndex) return null
 
   const startRawEnd = normalized.rawEndByNorm[Math.max(0, startApprox.endNorm - 1)] ?? rawStart
-  const endApprox = findApproximateMatch(normalized, endQuery, Math.max(startRawEnd, rawStart))
+  const endApprox = findApproximateMatch(normalized, endQuery, Math.max(startRawEnd, rawStart), threshold)
   if (!endApprox) return null
 
   const rawEnd = normalized.rawEndByNorm[Math.max(0, endApprox.endNorm - 1)]
@@ -374,8 +380,9 @@ function tryApproximateNormalizedMarkerMatch(
   normalized: NormalizedContent,
   markerQuery: string,
   fromIndex: number,
+  threshold: number = APPROX_CONFIDENCE_THRESHOLD,
 ): TextMarkerMatch | null {
-  const markerApprox = findApproximateMatch(normalized, markerQuery, fromIndex)
+  const markerApprox = findApproximateMatch(normalized, markerQuery, fromIndex, threshold)
   if (!markerApprox) return null
 
   const rawStart = normalized.rawStartByNorm[markerApprox.startNorm]
@@ -391,8 +398,9 @@ function tryApproximateNormalizedMarkerMatch(
   }
 }
 
-export function createTextMarkerMatcher(content: string): TextMarkerMatcher {
+export function createTextMarkerMatcher(content: string, options?: TextMarkerMatcherOptions): TextMarkerMatcher {
   const normalized = buildNormalizedContent(content)
+  const threshold = options?.approxConfidenceThreshold ?? APPROX_CONFIDENCE_THRESHOLD
 
   return {
     matchMarker(markerText: string, fromIndex: number): TextMarkerMatch | null {
@@ -408,7 +416,7 @@ export function createTextMarkerMatcher(content: string): TextMarkerMatcher {
       const l2 = tryExactNormalizedMarkerMatch(normalized, normalizedMarker, fromIndex)
       if (l2) return l2
 
-      const l3 = tryApproximateNormalizedMarkerMatch(normalized, normalizedMarker, fromIndex)
+      const l3 = tryApproximateNormalizedMarkerMatch(normalized, normalizedMarker, fromIndex, threshold)
       if (l3) return l3
 
       return null

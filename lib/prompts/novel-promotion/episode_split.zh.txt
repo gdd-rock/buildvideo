@@ -47,44 +47,27 @@
 
 ```json
 {
-  "analysis": {
-    "totalWords": 6500,
-    "episodeCount": 10,
-    "targetWordsPerEpisode": 650,
-    "allowedRange": "520-780"
-  },
   "episodes": [
     {
       "number": 1,
       "title": "剧集标题（4-8字）",
       "summary": "50字以内的剧情简介",
-      "estimatedWords": 650,
-      "startMarker": "该集开头的前20个字符（精确复制原文）",
-      "endMarker": "该集结尾的后20个字符（精确复制原文）"
+      "startMarker": "该集开头的前30-50个字符",
+      "endMarker": "该集结尾的后30-50个字符"
     }
-  ],
-  "validation": {
-    "maxWords": 720,
-    "minWords": 590,
-    "variance": 130,
-    "isBalanced": true
-  }
+  ]
 }
 ```
 
-## ⚠️ 最终验证清单（输出前必须检查）
+## ⚠️ startMarker / endMarker 规则（极其重要）
 
-在输出之前，你必须验证以下条件：
+startMarker 和 endMarker 是系统用来在原文中定位每集边界的关键依据。**必须严格遵守以下规则**：
 
-1. ☐ episodes.length ≈ totalWords ÷ 650（误差 ±1 集）
-2. ☐ 所有 estimatedWords 都在 allowedRange 范围内
-3. ☐ maxWords - minWords ≤ 300 字
-4. ☐ 没有任何一集超过 850 字
-5. ☐ 没有任何一集少于 400 字
-6. ☐ 上一集 endMarker 紧邻下一集 startMarker，无内容遗漏
-7. ☐ endMarker 不包含下一集的任何内容
-
-**如果验证失败，必须重新调整分割点直到通过！**
+1. **必须是原文中实际存在的连续子串** — 直接从原文中复制粘贴，不要改动任何一个字符
+2. **不要修改任何标点、空格、换行** — 原文是什么就复制什么
+3. **长度 30-50 个字符** — 太短容易匹配到错误位置，太长容易出错
+4. **上一集的 endMarker 区域必须紧邻下一集的 startMarker 区域** — 确保无内容遗漏
+5. **如果不确定，宁可多复制一些字符**
 
 ## 🔧 场景编号说明
 

@@ -17,15 +17,15 @@ type EpisodeSplit = {
   summary?: string
   startMarker?: string
   endMarker?: string
-  startIndex?: number
-  endIndex?: number
 }
 
 type SplitResponse = {
   episodes?: EpisodeSplit[]
 }
 
-const MAX_EPISODE_SPLIT_ATTEMPTS = 2
+const MAX_EPISODE_SPLIT_ATTEMPTS = 3
+const MARKER_MATCH_THRESHOLD = 0.75
+
 const EPISODE_SPLIT_BOUNDARY_SUFFIX = `
 
 [Boundary Constraints]
@@ -114,11 +114,131 @@ function readBoundaryMarker(value: unknown): string | null {
   return marker.length > 0 ? marker : null
 }
 
-function toValidBoundaryIndex(value: unknown, textLength: number): number | null {
-  if (typeof value !== 'number' || !Number.isFinite(value)) return null
-  const idx = Math.floor(value)
-  if (idx < 0 || idx > textLength) return null
-  return idx
+type MatchedEpisode = {
+  index: number
+  startPos: number
+  endPos: number
+  ep: EpisodeSplit
+}
+
+type FailedEpisode = {
+  index: number
+  ep: EpisodeSplit
+  reason: string
+}
+
+function buildRetryFeedback(failedEpisodes: FailedEpisode[]): string {
+  const lines = [
+    '上次分集结果存在以下问题，请修正：',
+    '',
+  ]
+
+  for (const f of failedEpisodes) {
+    const startMarker = readBoundaryMarker(f.ep.startMarker) || '(空)'
+    const endMarker = readBoundaryMarker(f.ep.endMarker) || '(空)'
+    lines.push(`- 第 ${f.index + 1} 集: ${f.reason}`)
+    lines.push(`  startMarker="${startMarker}"`)
+    lines.push(`  endMarker="${endMarker}"`)
+  }
+
+  lines.push('')
+  lines.push('请确保 startMarker 和 endMarker 是从原文中直接复制的连续子串（30-50个字符），不要修改任何标点或空格。')
+
+  return lines.join('\n')
+}
+
+/**
+ * Build episodes from matched anchor points, filling gaps for failed episodes.
+ */
+function buildEpisodesFromAnchors(
+  content: string,
+  splitEpisodes: EpisodeSplit[],
+  matched: MatchedEpisode[],
+  failed: FailedEpisode[],
+): Array<{ number: number; title: string; summary: string; content: string; wordCount: number }> {
+  if (matched.length === 0) {
+    throw new Error('没有任何集的 marker 匹配成功')
+  }
+
+  // Sort matched by position
+  matched.sort((a, b) => a.startPos - b.startPos)
+
+  // Build a position map: for each episode index, store its resolved range
+  const positionMap = new Map<number, { startPos: number; endPos: number }>()
+  for (const m of matched) {
+    positionMap.set(m.index, { startPos: m.startPos, endPos: m.endPos })
+  }
+
+  // Fill gaps for failed episodes by interpolating between anchors
+  const failedIndices = failed.map((f) => f.index).sort((a, b) => a - b)
+
+  for (const failIdx of failedIndices) {
+    // Find the nearest matched episode before and after
+    let prevEnd = 0
+    let nextStart = content.length
+
+    for (let i = failIdx - 1; i >= 0; i--) {
+      const pos = positionMap.get(i)
+      if (pos) { prevEnd = pos.endPos; break }
+    }
+    for (let i = failIdx + 1; i < splitEpisodes.length; i++) {
+      const pos = positionMap.get(i)
+      if (pos) { nextStart = pos.startPos; break }
+    }
+
+    if (nextStart <= prevEnd) continue // No room to fill
+
+    // Count how many consecutive failed episodes share this gap
+    let gapFailedCount = 1
+    let gapStart = failIdx
+    let gapEnd = failIdx
+    for (let i = failIdx - 1; i >= 0 && !positionMap.has(i) && failedIndices.includes(i); i--) {
+      gapStart = i
+      gapFailedCount++
+    }
+    for (let i = failIdx + 1; i < splitEpisodes.length && !positionMap.has(i) && failedIndices.includes(i); i++) {
+      gapEnd = i
+      gapFailedCount++
+    }
+
+    // Divide the gap evenly among the consecutive failed episodes
+    const gapLength = nextStart - prevEnd
+    const sliceLength = Math.floor(gapLength / gapFailedCount)
+    const posInGap = failIdx - gapStart
+    const sliceStart = prevEnd + posInGap * sliceLength
+    const sliceEnd = (posInGap === gapFailedCount - 1) ? nextStart : sliceStart + sliceLength
+
+    if (sliceEnd > sliceStart) {
+      positionMap.set(failIdx, { startPos: sliceStart, endPos: sliceEnd })
+    }
+  }
+
+  // Build final episode list in order
+  const result: Array<{ number: number; title: string; summary: string; content: string; wordCount: number }> = []
+
+  for (let idx = 0; idx < splitEpisodes.length; idx++) {
+    const pos = positionMap.get(idx)
+    if (!pos) continue
+
+    const ep = splitEpisodes[idx]
+    const episodeNumber = typeof ep.number === 'number' && Number.isFinite(ep.number) && ep.number > 0
+      ? Math.floor(ep.number)
+      : idx + 1
+
+    const title = typeof ep.title === 'string' ? ep.title.trim() : `第 ${idx + 1} 集`
+    const episodeContent = content.slice(pos.startPos, pos.endPos).trim()
+    if (!episodeContent) continue
+
+    result.push({
+      number: episodeNumber,
+      title,
+      summary: typeof ep.summary === 'string' ? ep.summary : '',
+      content: episodeContent,
+      wordCount: countWords(episodeContent),
+    })
+  }
+
+  return result
 }
 
 export async function handleEpisodeSplitTask(job: Job<TaskJobData>) {
@@ -184,21 +304,35 @@ export async function handleEpisodeSplitTask(job: Job<TaskJobData>) {
   }
   let episodes: EpisodeOutput[] | null = null
   let lastError: Error | null = null
+  let lastAiResponse: string | null = null
+  let lastFailedEpisodes: FailedEpisode[] = []
 
   try {
     for (let attempt = 1; attempt <= MAX_EPISODE_SPLIT_ATTEMPTS; attempt += 1) {
       try {
         await assertTaskActive(job, `episode_split_attempt:${attempt}`)
+
+        // Build messages: on retry, include previous response + error feedback
+        const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
+          { role: 'user', content: prompt },
+        ]
+        if (attempt > 1 && lastAiResponse && lastFailedEpisodes.length > 0) {
+          messages.push(
+            { role: 'assistant', content: lastAiResponse },
+            { role: 'user', content: buildRetryFeedback(lastFailedEpisodes) },
+          )
+        }
+
         const completion = await withInternalLLMStreamCallbacks(
           streamCallbacks,
           async () =>
             await executeAiTextStep({
               userId: job.data.userId,
               model: analysisModel,
-              messages: [{ role: 'user', content: prompt }],
+              messages,
               temperature: 0.3,
               reasoning: true,
-              reasoningEffort: 'high',
+              reasoningEffort: 'low',
               projectId,
               action: 'episode_split',
               meta: {
@@ -215,6 +349,7 @@ export async function handleEpisodeSplitTask(job: Job<TaskJobData>) {
         if (!aiResponse) {
           throw new Error('AI 返回为空')
         }
+        lastAiResponse = aiResponse
 
         await reportTaskProgress(job, 60, {
           stage: 'episode_split_parse',
@@ -234,73 +369,61 @@ export async function handleEpisodeSplitTask(job: Job<TaskJobData>) {
           stageLabel: '匹配剧集内容范围',
           displayMode: 'detail',
         })
-        const markerMatcher = createTextMarkerMatcher(content)
-        const resolved: EpisodeOutput[] = []
+
+        // Best-effort matching: try each episode, skip failures instead of aborting
+        const markerMatcher = createTextMarkerMatcher(content, {
+          approxConfidenceThreshold: MARKER_MATCH_THRESHOLD,
+        })
+        const matched: MatchedEpisode[] = []
+        const failed: FailedEpisode[] = []
         let searchFrom = 0
 
         for (let idx = 0; idx < splitEpisodes.length; idx += 1) {
           await assertTaskActive(job, `episode_split_match:${idx + 1}`)
           const ep = splitEpisodes[idx]
-          const episodeNumber =
-            typeof ep.number === 'number' && Number.isFinite(ep.number) && ep.number > 0
-              ? Math.floor(ep.number)
-              : null
-          if (episodeNumber === null) {
-            throw new Error(`episode_${idx + 1} 缺少有效 number`)
-          }
-
-          const title = typeof ep.title === 'string' ? ep.title.trim() : ''
-          if (!title) {
-            throw new Error(`episode_${idx + 1} 缺少 title`)
-          }
 
           const startMarker = readBoundaryMarker(ep.startMarker)
           const endMarker = readBoundaryMarker(ep.endMarker)
           if (!startMarker || !endMarker) {
-            throw new Error(`episode_${idx + 1} 必须同时提供 startMarker/endMarker`)
+            failed.push({ index: idx, ep, reason: '缺少 startMarker 或 endMarker' })
+            continue
           }
 
           const startMatch = markerMatcher.matchMarker(startMarker, searchFrom)
           if (!startMatch) {
-            throw new Error(`episode_${idx + 1} startMarker 无法定位`)
-          }
-          const endMatch = markerMatcher.matchMarker(endMarker, startMatch.endIndex)
-          if (!endMatch) {
-            throw new Error(`episode_${idx + 1} endMarker 无法定位`)
+            failed.push({ index: idx, ep, reason: 'startMarker 在原文中找不到' })
+            continue
           }
 
-          const rawStartIndex = toValidBoundaryIndex(ep.startIndex, content.length)
-          if (rawStartIndex !== null && Math.abs(rawStartIndex - startMatch.startIndex) > 200) {
-            throw new Error(`episode_${idx + 1} startIndex 与 marker 偏差过大`)
-          }
-          const rawEndIndex = toValidBoundaryIndex(ep.endIndex, content.length)
-          if (rawEndIndex !== null && Math.abs(rawEndIndex - endMatch.endIndex) > 200) {
-            throw new Error(`episode_${idx + 1} endIndex 与 marker 偏差过大`)
+          const endMatch = markerMatcher.matchMarker(endMarker, startMatch.endIndex)
+          if (!endMatch) {
+            failed.push({ index: idx, ep, reason: 'endMarker 在原文中找不到' })
+            continue
           }
 
           const startPos = startMatch.startIndex
           const endPos = endMatch.endIndex
           if (startPos < searchFrom || endPos <= startPos || endPos > content.length) {
-            throw new Error(`episode_${idx + 1} 边界区间无效`)
+            failed.push({ index: idx, ep, reason: '边界区间无效' })
+            continue
           }
 
-          const episodeContent = content.slice(startPos, endPos).trim()
-          if (!episodeContent) {
-            throw new Error(`episode_${idx + 1} 匹配内容为空`)
-          }
-
-          resolved.push({
-            number: episodeNumber,
-            title,
-            summary: typeof ep.summary === 'string' ? ep.summary : '',
-            content: episodeContent,
-            wordCount: countWords(episodeContent),
-          })
+          matched.push({ index: idx, startPos, endPos, ep })
           searchFrom = endPos
         }
 
-        episodes = resolved
-        break
+        lastFailedEpisodes = failed
+
+        // If >= 60% of episodes matched, fill gaps and succeed
+        const matchRatio = matched.length / splitEpisodes.length
+        if (matchRatio >= 0.6) {
+          episodes = buildEpisodesFromAnchors(content, splitEpisodes, matched, failed)
+          if (episodes.length > 0) break
+        }
+
+        throw new Error(
+          `仅匹配到 ${matched.length}/${splitEpisodes.length} 集（${Math.round(matchRatio * 100)}%），不足 60%`
+        )
       } catch (error) {
         lastError = error instanceof Error ? error : new Error(String(error))
       }

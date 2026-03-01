@@ -65,7 +65,7 @@ vi.mock('@/lib/workers/utils', () => utilsMock)
 vi.mock('@/lib/workers/handlers/llm-stream', () => llmStreamMock)
 vi.mock('@/lib/prompt-i18n', () => promptMock)
 vi.mock('@/lib/novel-promotion/story-to-script/clip-matching', () => ({
-  createTextMarkerMatcher: (content: string) => ({
+  createTextMarkerMatcher: (content: string, _options?: unknown) => ({
     matchMarker: (marker: string, fromIndex = 0) => {
       const startIndex = content.indexOf(marker, fromIndex)
       if (startIndex === -1) return null

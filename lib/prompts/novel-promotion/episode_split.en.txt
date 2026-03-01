@@ -5,36 +5,30 @@ Input text:
 {CONTENT}
 
 Core rules:
-1. Keep episode lengths as balanced as possible.
-2. Prefer natural breakpoints (chapter boundary, scene shift, time jump).
-3. Keep chronology and full coverage (no overlap, no missing text).
-4. Provide reliable startMarker and endMarker copied from source text.
+1. Keep episode lengths as balanced as possible (within ±20% of target).
+2. Target ~650 words per episode. Calculate: total_words ÷ 650 = number of episodes.
+3. Prefer natural breakpoints (chapter boundary, scene shift, time jump).
+4. Keep chronology and full coverage (no overlap, no missing text).
 5. Return JSON only.
 
 Output format:
+```json
 {
-  "analysis": {
-    "totalWords": 0,
-    "episodeCount": 0,
-    "targetWordsPerEpisode": 0,
-    "allowedRange": "0-0"
-  },
   "episodes": [
     {
       "number": 1,
       "title": "Episode title",
       "summary": "Short summary",
-      "estimatedWords": 0,
-      "startMarker": "exact start marker",
-      "endMarker": "exact end marker",
-      "startIndex": 0,
-      "endIndex": 0
+      "startMarker": "first 30-50 characters of this episode copied verbatim from source",
+      "endMarker": "last 30-50 characters of this episode copied verbatim from source"
     }
-  ],
-  "validation": {
-    "maxWords": 0,
-    "minWords": 0,
-    "variance": 0,
-    "isBalanced": true
-  }
+  ]
 }
+```
+
+CRITICAL — startMarker / endMarker rules:
+1. Must be an EXACT continuous substring from the original text — copy-paste directly, do not alter any character.
+2. Do NOT change any punctuation, spacing, or line breaks.
+3. Length should be 30-50 characters — shorter markers may match wrong positions.
+4. Each episode's endMarker region must be immediately adjacent to the next episode's startMarker region — no gaps.
+5. When in doubt, copy MORE characters rather than fewer.
