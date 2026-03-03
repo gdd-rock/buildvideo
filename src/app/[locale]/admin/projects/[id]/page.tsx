@@ -24,7 +24,7 @@ interface ProjectDetail {
     workflowMode: string
     characters: { id: string; name: string; aliases: string | null; profileConfirmed: boolean; appearances: { imageUrl: string | null }[] }[]
     locations: { id: string; name: string; summary: string | null; images: { imageUrl: string | null }[] }[]
-    episodes: { id: string; name: string | null; episodeIndex: number; createdAt: string }[]
+    episodes: { id: string; name: string | null; episodeNumber: number; createdAt: string }[]
   } | null
   _count: { usageCosts: number }
   usageSummary: { apiType: string; totalCost: number; count: number }[]
@@ -153,8 +153,8 @@ export default function AdminProjectDetail() {
             <tbody>
               {npd.episodes.map(ep => (
                 <tr key={ep.id} className="border-b border-[var(--glass-stroke-soft)] last:border-0 hover:bg-[var(--glass-bg-muted)] transition-colors">
-                  <td className="px-5 py-2.5 text-[var(--glass-text-tertiary)]">{ep.episodeIndex + 1}</td>
-                  <td className="px-5 py-2.5 text-[var(--glass-text-primary)]">{ep.name || `Episode ${ep.episodeIndex + 1}`}</td>
+                  <td className="px-5 py-2.5 text-[var(--glass-text-tertiary)]">{ep.episodeNumber + 1}</td>
+                  <td className="px-5 py-2.5 text-[var(--glass-text-primary)]">{ep.name || `Episode ${ep.episodeNumber + 1}`}</td>
                   <td className="px-5 py-2.5 text-right text-[var(--glass-text-tertiary)] text-xs">{fmtDate(ep.createdAt)}</td>
                 </tr>
               ))}

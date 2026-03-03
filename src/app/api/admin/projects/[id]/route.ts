@@ -59,11 +59,11 @@ export const GET = apiHandler(async (
             },
           },
           episodes: {
-            orderBy: { episodeIndex: 'asc' },
+            orderBy: { episodeNumber: 'asc' },
             select: {
               id: true,
               name: true,
-              episodeIndex: true,
+              episodeNumber: true,
               createdAt: true,
             },
           },
