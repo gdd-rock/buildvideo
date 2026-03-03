@@ -38,6 +38,10 @@ function extractOperationName(response: unknown): string | null {
     return null
 }
 
+function encodeProviderToken(providerId: string): string {
+    return Buffer.from(providerId, 'utf8').toString('base64url')
+}
+
 export class GoogleVeoVideoGenerator extends BaseVideoGenerator {
     private providerId: string
 
@@ -49,8 +53,11 @@ export class GoogleVeoVideoGenerator extends BaseVideoGenerator {
     protected async doGenerate(params: VideoGenerateParams): Promise<GenerateResult> {
         const { userId, imageUrl, prompt = '', options = {} } = params
 
-        const { apiKey } = await getProviderConfig(userId, this.providerId)
-        const ai = new GoogleGenAI({ apiKey })
+        const { apiKey, baseUrl } = await getProviderConfig(userId, this.providerId)
+        const ai = new GoogleGenAI({
+            apiKey,
+            ...(baseUrl ? { httpOptions: { baseUrl } } : {}),
+        })
 
         const {
             modelId = 'veo-3.1-generate-preview',
@@ -126,11 +133,17 @@ export class GoogleVeoVideoGenerator extends BaseVideoGenerator {
             throw new Error('Veo 未返回 operation name')
         }
 
+        // Encode providerToken when not using default 'google' provider,
+        // so polling can retrieve the correct API key
+        const externalId = this.providerId === 'google'
+            ? `GOOGLE:VIDEO:${operationName}`
+            : `GOOGLE:VIDEO:${encodeProviderToken(this.providerId)}:${operationName}`
+
         return {
             success: true,
             async: true,
             requestId: operationName,
-            externalId: `GOOGLE:VIDEO:${operationName}`
+            externalId,
         }
     }
 }

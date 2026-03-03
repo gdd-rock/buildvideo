@@ -1,6 +1,7 @@
 import { buildCharactersIntroduction } from '@/lib/constants'
 import { normalizeAnyError } from '@/lib/errors/normalize'
 import { createScopedLogger } from '@/lib/logging/core'
+import { cleanJsonString } from '@/lib/workers/handlers/json-repair'
 import { createClipContentMatcher, type ClipMatchLevel } from './clip-matching'
 
 export type StoryToScriptStepMeta = {
@@ -110,6 +111,10 @@ function parseJSONObject(responseText: string): Record<string, unknown> {
   } catch { /* continue */ }
 
   try {
+    return JSON.parse(cleanJsonString(cleaned)) as Record<string, unknown>
+  } catch { /* continue */ }
+
+  try {
     return JSON.parse(escapeControlCharsInJsonStrings(cleaned)) as Record<string, unknown>
   } catch { /* continue */ }
 
@@ -129,7 +134,7 @@ function parseClipArray(responseText: string): Record<string, unknown>[] {
   const lastBracket = cleaned.lastIndexOf(']')
   if (firstBracket !== -1 && lastBracket !== -1 && lastBracket > firstBracket) {
     const arrayStr = cleaned.slice(firstBracket, lastBracket + 1)
-    for (const repair of [identity, escapeControlCharsInJsonStrings, fixUnescapedQuotesInJson]) {
+    for (const repair of [identity, cleanJsonString, escapeControlCharsInJsonStrings, fixUnescapedQuotesInJson]) {
       try {
         const parsed = JSON.parse(repair(arrayStr))
         if (Array.isArray(parsed)) {
@@ -288,12 +293,17 @@ function parseScreenplayObject(responseText: string): Record<string, unknown> {
     return JSON.parse(cleaned) as Record<string, unknown>
   } catch { /* continue */ }
 
-  // Level 2: escape control characters
+  // Level 2: clean curly/smart quotes
+  try {
+    return JSON.parse(cleanJsonString(cleaned)) as Record<string, unknown>
+  } catch { /* continue */ }
+
+  // Level 3: escape control characters
   try {
     return JSON.parse(escapeControlCharsInJsonStrings(cleaned)) as Record<string, unknown>
   } catch { /* continue */ }
 
-  // Level 3: fix unescaped interior double quotes + control chars
+  // Level 4: fix unescaped interior double quotes + control chars
   return JSON.parse(fixUnescapedQuotesInJson(cleaned)) as Record<string, unknown>
 }
 

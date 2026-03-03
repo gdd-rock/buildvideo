@@ -102,14 +102,27 @@ export function parseExternalId(externalId: string): {
     if (externalId.startsWith('GOOGLE:')) {
         const parts = externalId.split(':')
         const type = parts[1]
-        const requestId = parts.slice(2).join(':')
-        if (type !== 'VIDEO' || !requestId) {
+        if (type !== 'VIDEO') {
             throw new Error(`无效 GOOGLE externalId: "${externalId}"，应为 GOOGLE:VIDEO:operationName`)
         }
-        return {
-            provider: 'GOOGLE',
-            type: 'VIDEO',
-            requestId,
+        // New format: GOOGLE:VIDEO:providerToken:operationName (providerToken is base64url, never contains '/')
+        // Old format: GOOGLE:VIDEO:operationName (operationName starts with 'models/')
+        const thirdPart = parts[2] || ''
+        if (thirdPart.startsWith('models/') || thirdPart.startsWith('operations/')) {
+            // Old format — no providerToken
+            const requestId = parts.slice(2).join(':')
+            if (!requestId) {
+                throw new Error(`无效 GOOGLE externalId: "${externalId}"，缺少 operationName`)
+            }
+            return { provider: 'GOOGLE', type: 'VIDEO', requestId }
+        } else {
+            // New format — thirdPart is providerToken
+            const providerToken = thirdPart
+            const requestId = parts.slice(3).join(':')
+            if (!providerToken || !requestId) {
+                throw new Error(`无效 GOOGLE externalId: "${externalId}"，应为 GOOGLE:VIDEO:providerToken:operationName`)
+            }
+            return { provider: 'GOOGLE', type: 'VIDEO', providerToken, requestId }
         }
     }
 
@@ -186,7 +199,7 @@ export async function pollAsyncTask(
         case 'GEMINI':
             return await pollGeminiTask(parsed.requestId, userId)
         case 'GOOGLE':
-            return await pollGoogleVideoTask(parsed.requestId, userId)
+            return await pollGoogleVideoTask(parsed.requestId, userId, parsed.providerToken)
         case 'MINIMAX':
             return await pollMinimaxTask(parsed.requestId, userId)
         case 'VIDU':
@@ -339,16 +352,34 @@ async function pollGeminiTask(
  */
 async function pollGoogleVideoTask(
     operationName: string,
-    userId: string
+    userId: string,
+    providerToken?: string,
 ): Promise<PollResult> {
-    const { apiKey } = await getProviderConfig(userId, 'google')
-    const result = await queryGoogleVideoStatus(operationName, apiKey)
+    const providerId = providerToken
+        ? decodeProviderId(providerToken)
+        : 'google'
+    const { apiKey, baseUrl } = await getProviderConfig(userId, providerId)
+    const result = await queryGoogleVideoStatus(operationName, apiKey, baseUrl)
+
+    // Google API download URLs require authentication
+    const needsAuth = result.videoUrl
+        && result.videoUrl.includes('generativelanguage.googleapis.com')
+
+    // When using a proxy, rewrite the download URL to go through the proxy
+    let finalVideoUrl = result.videoUrl
+    if (needsAuth && baseUrl && result.videoUrl) {
+        const googleOrigin = 'https://generativelanguage.googleapis.com'
+        if (result.videoUrl.startsWith(googleOrigin)) {
+            finalVideoUrl = baseUrl.replace(/\/+$/, '') + result.videoUrl.substring(googleOrigin.length)
+        }
+    }
 
     return {
         status: result.status,
-        videoUrl: result.videoUrl,
-        resultUrl: result.videoUrl,
-        error: result.error
+        videoUrl: finalVideoUrl,
+        resultUrl: finalVideoUrl,
+        error: result.error,
+        ...(needsAuth ? { downloadHeaders: { 'x-goog-api-key': apiKey } } : {}),
     }
 }
 

@@ -34,6 +34,8 @@ export const GET = apiHandler(async (request: NextRequest) => {
         role: true,
         disabled: true,
         createdAt: true,
+        updatedAt: true,
+        balance: { select: { balance: true, totalSpent: true } },
         _count: { select: { projects: true } },
       },
     }),

@@ -1,4 +1,5 @@
 import { prisma } from '@/lib/prisma'
+import { robustJsonParse } from './json-repair'
 
 export type AnyObj = Record<string, unknown>
 
@@ -15,14 +16,7 @@ export function readRequiredString(value: unknown, field: string): string {
 }
 
 export function parseVisualResponse(responseText: string): AnyObj {
-  let cleaned = responseText.trim()
-  cleaned = cleaned.replace(/^```json\s*/i, '').replace(/^```\s*/, '').replace(/\s*```$/, '')
-  const firstBrace = cleaned.indexOf('{')
-  const lastBrace = cleaned.lastIndexOf('}')
-  if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
-    cleaned = cleaned.substring(firstBrace, lastBrace + 1)
-  }
-  return JSON.parse(cleaned) as AnyObj
+  return robustJsonParse<AnyObj>(responseText)
 }
 
 export async function resolveProjectModel(projectId: string) {

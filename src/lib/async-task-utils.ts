@@ -171,7 +171,7 @@ export async function queryGeminiBatchStatus(batchName: string, apiKey: string):
  * @param operationName 操作名称（如 operations/xxx）
  * @param apiKey Google AI API Key
  */
-export async function queryGoogleVideoStatus(operationName: string, apiKey: string): Promise<TaskStatus> {
+export async function queryGoogleVideoStatus(operationName: string, apiKey: string, baseUrl?: string): Promise<TaskStatus> {
     if (!apiKey) {
         throw new Error('请配置 Google AI API Key')
     }
@@ -180,7 +180,10 @@ export async function queryGoogleVideoStatus(operationName: string, apiKey: stri
 
     try {
         const { GoogleGenAI, GenerateVideosOperation } = await import('@google/genai')
-        const ai = new GoogleGenAI({ apiKey })
+        const ai = new GoogleGenAI({
+            apiKey,
+            ...(baseUrl ? { httpOptions: { baseUrl } } : {}),
+        })
         const operation = new GenerateVideosOperation()
         operation.name = operationName
         const op = await ai.operations.getVideosOperation({ operation })

@@ -12,6 +12,7 @@ const navItems: { key: string; href: string; icon: AppIconName }[] = [
   { key: 'users', href: '/admin/users', icon: 'user' },
   { key: 'projects', href: '/admin/projects', icon: 'folder' },
   { key: 'tasks', href: '/admin/tasks', icon: 'cpu' },
+  { key: 'logs', href: '/admin/logs', icon: 'fileText' },
 ]
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {

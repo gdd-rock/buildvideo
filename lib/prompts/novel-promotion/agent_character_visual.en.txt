@@ -42,3 +42,4 @@ Strict constraints:
 1. JSON only.
 2. Keep names exactly aligned with input profiles.
 3. Each descriptions array must contain at least 3 valid English strings.
+4. IMPORTANT - Likeness & originality: Every character must be a fully original, fictional design. Never reference or imitate the appearance of any real celebrity, actor, singer, public figure, or internet personality. If the source text mentions a character "looks like" a real person, ignore that reference and create a unique facial feature combination instead. Ensure no generated description could be mistaken for a real person's likeness.

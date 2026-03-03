@@ -10,6 +10,7 @@ import { createTextMarkerMatcher } from '@/lib/novel-promotion/story-to-script/c
 import { createWorkerLLMStreamCallbacks, createWorkerLLMStreamContext } from './llm-stream'
 import type { TaskJobData } from '@/lib/task/types'
 import { buildPrompt, PROMPT_IDS } from '@/lib/prompt-i18n'
+import { cleanJsonString } from './json-repair'
 
 type EpisodeSplit = {
   number?: number
@@ -33,53 +34,7 @@ const EPISODE_SPLIT_BOUNDARY_SUFFIX = `
 2. Markers must be locatable in the original text; allow punctuation/whitespace differences only.
 3. If boundaries cannot be located reliably, return an empty episodes array.`
 
-function cleanJsonStringForParse(input: string): string {
-  // Step 0: Normalize curly/smart quotes to straight quotes (LLMs frequently output these)
-  let normalized = input.replace(/[\u201C\u201D\u201E\u201F\u2033\u2036]/g, '"')
-  normalized = normalized.replace(/[\u2018\u2019\u201A\u201B\u2032\u2035]/g, "'")
-
-  // Step 1: Escape unescaped control characters inside JSON string values
-  let result = ''
-  let inString = false
-  let escape = false
-
-  for (let i = 0; i < normalized.length; i++) {
-    const ch = normalized[i]
-
-    if (escape) {
-      result += ch
-      escape = false
-      continue
-    }
-
-    if (ch === '\\' && inString) {
-      escape = true
-      result += ch
-      continue
-    }
-
-    if (ch === '"') {
-      inString = !inString
-      result += ch
-      continue
-    }
-
-    if (inString) {
-      // Escape control characters inside strings
-      if (ch === '\n') { result += '\\n'; continue }
-      if (ch === '\r') { result += '\\r'; continue }
-      if (ch === '\t') { result += '\\t'; continue }
-      if (/[\x00-\x1f\x7f]/.test(ch)) { result += '\\u' + ch.charCodeAt(0).toString(16).padStart(4, '0'); continue }
-    }
-
-    result += ch
-  }
-
-  // Step 2: Remove trailing commas before } or ]
-  result = result.replace(/,\s*([\]}])/g, '$1')
-
-  return result
-}
+// JSON cleaning is provided by ./json-repair.ts (cleanJsonString)
 
 function parseSplitResponse(aiResponse: string): SplitResponse {
   const jsonMatch = aiResponse.match(/```json\s*([\s\S]*?)\s*```/) || aiResponse.match(/\{[\s\S]*\}/)
@@ -89,23 +44,55 @@ function parseSplitResponse(aiResponse: string): SplitResponse {
 
   const rawJson = jsonMatch[1] || jsonMatch[0]
 
-  // Try parsing raw first, then with cleanup
-  let parsed: SplitResponse | null = null
+  // Strategy 1: Parse raw JSON directly
   try {
-    parsed = JSON.parse(rawJson) as SplitResponse
-  } catch {
-    const cleaned = cleanJsonStringForParse(rawJson)
-    try {
-      parsed = JSON.parse(cleaned) as SplitResponse
-    } catch (e2) {
-      throw new Error(`Failed to parse AI JSON response: ${(e2 as Error).message}. Raw length: ${rawJson.length}`)
-    }
+    const parsed = JSON.parse(rawJson) as SplitResponse
+    if (parsed && Array.isArray(parsed.episodes) && parsed.episodes.length > 0) return parsed
+  } catch { /* fall through */ }
+
+  // Strategy 2: Smart cleaning (handles curly quotes, unescaped interior quotes, control chars)
+  try {
+    const cleaned = cleanJsonString(rawJson)
+    const parsed = JSON.parse(cleaned) as SplitResponse
+    if (parsed && Array.isArray(parsed.episodes) && parsed.episodes.length > 0) return parsed
+  } catch { /* fall through */ }
+
+  // Strategy 3: Regex-based field extraction as last resort
+  try {
+    const parsed = extractEpisodesViaRegex(rawJson)
+    if (parsed && Array.isArray(parsed.episodes) && parsed.episodes.length > 0) return parsed
+  } catch { /* fall through */ }
+
+  // All strategies failed — log raw for debugging
+  const snippet = rawJson.length > 800 ? rawJson.slice(0, 400) + ' ... ' + rawJson.slice(-400) : rawJson
+  throw new Error(`Failed to parse AI JSON response. Raw length: ${rawJson.length}. Snippet: ${snippet}`)
+}
+
+function extractEpisodesViaRegex(text: string): SplitResponse {
+  const episodes: EpisodeSplit[] = []
+  // Match episode-like blocks: look for number/title/summary/startMarker/endMarker patterns
+  const blockPattern = /\{[^{}]*?"number"\s*:\s*(\d+)[^{}]*?"title"\s*:\s*(?:"((?:[^"\\]|\\.)*)"|[\u201C]((?:[^\u201D\\]|\\.)*)[\u201D])[^{}]*?\}/g
+  let match: RegExpExecArray | null
+
+  while ((match = blockPattern.exec(text)) !== null) {
+    const block = match[0]
+    const number = parseInt(match[1], 10)
+    const title = (match[2] || match[3] || '').replace(/\\"/g, '"')
+
+    const summaryMatch = block.match(/"summary"\s*:\s*(?:"((?:[^"\\]|\\.)*)"|[\u201C]((?:[^\u201D\\]|\\.)*)[\u201D])/)
+    const startMatch = block.match(/"startMarker"\s*:\s*(?:"((?:[^"\\]|\\.)*)"|[\u201C]((?:[^\u201D\\]|\\.)*)[\u201D])/)
+    const endMatch = block.match(/"endMarker"\s*:\s*(?:"((?:[^"\\]|\\.)*)"|[\u201C]((?:[^\u201D\\]|\\.)*)[\u201D])/)
+
+    episodes.push({
+      number,
+      title,
+      summary: summaryMatch ? (summaryMatch[1] || summaryMatch[2] || '') : '',
+      startMarker: startMatch ? (startMatch[1] || startMatch[2] || '') : '',
+      endMarker: endMatch ? (endMatch[1] || endMatch[2] || '') : '',
+    })
   }
 
-  if (!parsed || !Array.isArray(parsed.episodes) || parsed.episodes.length === 0) {
-    throw new Error('Failed to parse AI response: invalid episodes payload')
-  }
-  return parsed
+  return { episodes }
 }
 
 function readBoundaryMarker(value: unknown): string | null {

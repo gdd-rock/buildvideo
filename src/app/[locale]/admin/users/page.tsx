@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { AppIcon } from '@/components/ui/icons'
 
 interface UserItem {
@@ -89,7 +90,11 @@ export default function AdminUsers() {
                 <tr><td colSpan={7} className="text-center py-10 text-[var(--glass-text-tertiary)]">{t('common.noData')}</td></tr>
               ) : users.map(u => (
                 <tr key={u.id} className="border-b border-[var(--glass-stroke-soft)] last:border-0 hover:bg-[var(--glass-bg-muted)] transition-colors">
-                  <td className="px-5 py-3 font-medium text-[var(--glass-text-primary)]">{u.name}</td>
+                  <td className="px-5 py-3 font-medium">
+                    <Link href={`/admin/users/${u.id}`} className="text-[var(--glass-tone-info-fg)] hover:underline">
+                      {u.name}
+                    </Link>
+                  </td>
                   <td className="px-5 py-3 text-[var(--glass-text-secondary)]">{u.email || '-'}</td>
                   <td className="px-5 py-3">
                     <span className={`glass-chip px-2 py-0.5 text-[10px] ${u.role === 'ADMIN' ? 'glass-chip-info' : 'glass-chip-default'}`}>

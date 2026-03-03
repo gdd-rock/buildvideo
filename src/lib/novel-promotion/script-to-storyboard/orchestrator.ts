@@ -1,6 +1,7 @@
 import { buildCharactersIntroduction } from '@/lib/constants'
 import { normalizeAnyError } from '@/lib/errors/normalize'
 import { createScopedLogger } from '@/lib/logging/core'
+import { cleanJsonString } from '@/lib/workers/handlers/json-repair'
 import {
   type ActingDirection,
   type CharacterAsset,
@@ -95,14 +96,20 @@ function parseJsonArray<T extends JsonRecord>(responseText: string, label: strin
     throw new JsonParseError(`${label}: JSON format invalid`, responseText)
   }
 
+  const raw = jsonText.slice(firstBracket, lastBracket + 1)
   let parsed: unknown
   try {
-    parsed = JSON.parse(jsonText.slice(firstBracket, lastBracket + 1))
-  } catch (e) {
-    throw new JsonParseError(
-      `${label}: JSON parse error: ${e instanceof Error ? e.message : String(e)}`,
-      responseText,
-    )
+    parsed = JSON.parse(raw)
+  } catch {
+    // Fallback: clean curly/smart quotes then retry
+    try {
+      parsed = JSON.parse(cleanJsonString(raw))
+    } catch (e2) {
+      throw new JsonParseError(
+        `${label}: JSON parse error: ${e2 instanceof Error ? e2.message : String(e2)}`,
+        responseText,
+      )
+    }
   }
   if (!Array.isArray(parsed) || parsed.length === 0) {
     throw new JsonParseError(`${label}: empty result`, responseText)
