@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl'
 import { useEffect, useState, useCallback } from 'react'
+import Link from 'next/link'
 import { AppIcon } from '@/components/ui/icons'
 
 interface ProjectItem {
@@ -73,7 +74,9 @@ export default function AdminProjects() {
                 <tr><td colSpan={4} className="text-center py-10 text-[var(--glass-text-tertiary)]">{t('common.noData')}</td></tr>
               ) : projects.map(p => (
                 <tr key={p.id} className="border-b border-[var(--glass-stroke-soft)] last:border-0 hover:bg-[var(--glass-bg-muted)] transition-colors">
-                  <td className="px-5 py-3 font-medium text-[var(--glass-text-primary)]">{p.name}</td>
+                  <td className="px-5 py-3 font-medium">
+                    <Link href={`/admin/projects/${p.id}`} className="text-[var(--glass-tone-info-fg)] hover:underline">{p.name}</Link>
+                  </td>
                   <td className="px-5 py-3 text-[var(--glass-text-secondary)]">{p.user.name}</td>
                   <td className="px-5 py-3 text-[var(--glass-text-secondary)]">{p._count.usageCosts}</td>
                   <td className="px-5 py-3 text-[var(--glass-text-tertiary)] text-xs">{new Date(p.createdAt).toLocaleDateString()}</td>

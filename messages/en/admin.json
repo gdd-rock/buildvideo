@@ -90,7 +90,29 @@
     "txDescription": "Description",
     "txTime": "Time",
     "noPreferences": "No preferences configured",
-    "noBalance": "No balance record"
+    "noBalance": "No balance record",
+    "viewAssets": "View Assets"
+  },
+  "userAssets": {
+    "title": "User Assets",
+    "back": "Back to User Detail",
+    "characters": "Characters",
+    "locations": "Locations",
+    "voices": "Voices",
+    "designed": "AI Designed",
+    "custom": "Custom Upload"
+  },
+  "projectDetail": {
+    "title": "Project Detail",
+    "back": "Back to Projects",
+    "basicInfo": "Basic Info",
+    "owner": "Owner",
+    "mode": "Mode",
+    "config": "Configuration",
+    "episodes": "Episodes",
+    "episodeName": "Episode Name",
+    "characters": "Characters",
+    "locations": "Locations"
   },
   "projects": {
     "title": "Project Management",

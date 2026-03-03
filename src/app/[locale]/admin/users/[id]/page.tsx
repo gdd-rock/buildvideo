@@ -128,6 +128,12 @@ export default function AdminUserDetail() {
             <span className="glass-chip glass-chip-danger px-2 py-0.5 text-[10px]">{t('users.disabled')}</span>
           )}
         </div>
+        <Link
+          href={`/admin/users/${userId}/assets`}
+          className="glass-btn-base glass-btn-soft px-4 py-2 text-xs rounded-lg"
+        >
+          {t('userDetail.viewAssets')}
+        </Link>
       </div>
 
       {/* Top row: Basic Info + Balance */}
@@ -284,7 +290,9 @@ export default function AdminUserDetail() {
             <tbody>
               {user.projects.map(p => (
                 <tr key={p.id} className="border-b border-[var(--glass-stroke-soft)] last:border-0 hover:bg-[var(--glass-bg-muted)] transition-colors">
-                  <td className="px-5 py-2.5 text-[var(--glass-text-primary)]">{p.name}</td>
+                  <td className="px-5 py-2.5">
+                    <Link href={`/admin/projects/${p.id}`} className="text-[var(--glass-tone-info-fg)] hover:underline">{p.name}</Link>
+                  </td>
                   <td className="px-5 py-2.5 text-right text-[var(--glass-text-secondary)]">{p._count.usageCosts}</td>
                   <td className="px-5 py-2.5 text-right text-[var(--glass-text-tertiary)] text-xs">{fmtDate(p.createdAt)}</td>
                 </tr>

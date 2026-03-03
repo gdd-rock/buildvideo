@@ -117,7 +117,29 @@
     "txDescription": "描述",
     "txTime": "时间",
     "noPreferences": "用户未配置偏好",
-    "noBalance": "暂无余额记录"
+    "noBalance": "暂无余额记录",
+    "viewAssets": "查看资产"
+  },
+  "userAssets": {
+    "title": "用户资产",
+    "back": "返回用户详情",
+    "characters": "角色",
+    "locations": "场景",
+    "voices": "音色",
+    "designed": "AI 设计",
+    "custom": "自定义上传"
+  },
+  "projectDetail": {
+    "title": "项目详情",
+    "back": "返回项目列表",
+    "basicInfo": "基本信息",
+    "owner": "所属用户",
+    "mode": "项目模式",
+    "config": "项目配置",
+    "episodes": "剧集",
+    "episodeName": "集名",
+    "characters": "角色",
+    "locations": "场景"
   },
   "common": {
     "noData": "暂无数据",
