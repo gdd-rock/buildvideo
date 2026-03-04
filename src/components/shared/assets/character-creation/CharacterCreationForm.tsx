@@ -132,9 +132,12 @@ export default function CharacterCreationForm({
 
     setLoadingDHImages(true)
     try {
-      const urls = dh.avatarImageUrls.length > 0
-        ? dh.avatarImageUrls
-        : (dh.avatarImageUrl ? [dh.avatarImageUrl] : [])
+      // 优先使用第5张合成参考图（index 4），否则回退到全部图片
+      const urls = dh.avatarImageUrls.length >= 5
+        ? [dh.avatarImageUrls[4]]
+        : dh.avatarImageUrls.length > 0
+          ? dh.avatarImageUrls
+          : (dh.avatarImageUrl ? [dh.avatarImageUrl] : [])
 
       const base64Images: string[] = []
       for (const url of urls) {
