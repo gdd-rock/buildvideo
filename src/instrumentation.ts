@@ -209,5 +209,14 @@ export async function register() {
     } catch (error) {
       _ulogError('[Instrumentation] Failed to start task watchdog:', error)
     }
+
+    // ─── Phase 4: 启动 Monitor（自动修复 + 告警通知）───
+    try {
+      const { startMonitor } = await import('@/lib/monitor')
+      startMonitor()
+      _ulogInfo('[Instrumentation] Monitor started')
+    } catch (error) {
+      _ulogError('[Instrumentation] Failed to start monitor:', error)
+    }
   }
 }

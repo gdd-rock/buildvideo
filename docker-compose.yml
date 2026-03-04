@@ -89,6 +89,11 @@ services:
       LOG_AUDIT_ENABLED: "true"
       LOG_SERVICE: "buildvideo"
       LOG_REDACT_KEYS: "password,token,apiKey,apikey,authorization,cookie,secret,access_token,refresh_token"
+      # 监控告警
+      MONITOR_INTERVAL_MS: "60000"
+      ALERT_WECHAT_WEBHOOK_URL: ${ALERT_WECHAT_WEBHOOK_URL:-}
+      ALERT_TELEGRAM_BOT_TOKEN: ${ALERT_TELEGRAM_BOT_TOKEN:-}
+      ALERT_TELEGRAM_CHAT_ID: ${ALERT_TELEGRAM_CHAT_ID:-}
       # 计费
       BILLING_MODE: "OFF"
       # 流式
