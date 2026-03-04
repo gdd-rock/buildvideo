@@ -90,7 +90,8 @@ model NovelPromotionCharacter {
   profileData             String?               @db.Text
   profileConfirmed        Boolean               @default(false)
   introduction            String?               @db.Text // 角色介绍（身份、关系、称呼映射，如"我"对应此角色）
-  sourceGlobalCharacterId String? // 🆕 来源全局角色ID（复制时记录）
+  sourceGlobalCharacterId String? // 来源全局角色ID（复制时记录）
+  sourceDigitalHumanId    String? // 来源数字人ID（引用时记录）
   appearances             CharacterAppearance[]
   novelPromotionProject   NovelPromotionProject @relation(fields: [novelPromotionProjectId], references: [id], onDelete: Cascade)
 
@@ -418,6 +419,7 @@ model User {
   globalCharacters   GlobalCharacter[]
   globalLocations    GlobalLocation[]
   globalVoices       GlobalVoice[]
+  globalDigitalHumans GlobalDigitalHuman[]
   tasks              Task[]
   taskEvents         TaskEvent[]
   graphRuns          GraphRun[]
@@ -790,10 +792,11 @@ model GlobalAssetFolder {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user       User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  characters GlobalCharacter[]
-  locations  GlobalLocation[]
-  voices     GlobalVoice[]
+  user          User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  characters    GlobalCharacter[]
+  locations     GlobalLocation[]
+  voices        GlobalVoice[]
+  digitalHumans GlobalDigitalHuman[]
 
   @@index([userId])
   @@map("global_asset_folders")
@@ -930,6 +933,41 @@ model GlobalVoice {
   @@map("global_voices")
 }
 
+// 全局数字人
+model GlobalDigitalHuman {
+  id                  String   @id @default(uuid())
+  userId              String
+  folderId            String?
+  name                String
+  description         String?  @db.Text
+  // 源照片
+  photoUrl            String?  @db.Text
+  photoMediaId        String?
+  photoMedia          MediaObject? @relation("GlobalDigitalHumanPhotoMedia", fields: [photoMediaId], references: [id], onDelete: SetNull)
+  // 生成的数字人形象图
+  avatarImageUrl      String?  @db.Text
+  avatarImageUrls     String?  @db.Text // JSON array 多张变体
+  selectedIndex       Int?
+  // 生成的预览视频
+  previewVideoUrl     String?  @db.Text
+  previewVideoMediaId String?
+  previewVideoMedia   MediaObject? @relation("GlobalDigitalHumanPreviewVideoMedia", fields: [previewVideoMediaId], references: [id], onDelete: SetNull)
+  // 状态
+  status              String   @default("pending") // pending | generating | ready | failed
+  gender              String?  // male | female
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder GlobalAssetFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([folderId])
+  @@index([photoMediaId])
+  @@index([previewVideoMediaId])
+  @@map("global_digital_humans")
+}
+
 model MediaObject {
   id         String   @id @default(uuid())
   publicId   String   @unique
@@ -962,6 +1000,8 @@ model MediaObject {
   globalLocationImageImages             GlobalLocationImage[]       @relation("GlobalLocationImageMedia")
   globalLocationImagePreviousImages     GlobalLocationImage[]       @relation("GlobalLocationImagePreviousImageMedia")
   globalVoiceCustomVoices               GlobalVoice[]               @relation("GlobalVoiceCustomVoiceMedia")
+  globalDigitalHumanPhotos              GlobalDigitalHuman[]        @relation("GlobalDigitalHumanPhotoMedia")
+  globalDigitalHumanPreviewVideos       GlobalDigitalHuman[]        @relation("GlobalDigitalHumanPreviewVideoMedia")
 
   @@index([createdAt])
   @@map("media_objects")

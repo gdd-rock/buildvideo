@@ -12,6 +12,8 @@ export const queryKeys = {
             folderId ? ['global-assets', 'locations', folderId] as const : ['global-assets', 'locations'] as const,
         voices: (folderId?: string | null) =>
             folderId ? ['global-assets', 'voices', folderId] as const : ['global-assets', 'voices'] as const,
+        digitalHumans: (folderId?: string | null) =>
+            folderId ? ['global-assets', 'digital-humans', folderId] as const : ['global-assets', 'digital-humans'] as const,
         folders: () => ['global-assets', 'folders'] as const,
     },
 

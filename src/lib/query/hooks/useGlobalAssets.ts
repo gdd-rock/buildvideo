@@ -71,6 +71,21 @@ export interface GlobalVoice {
     folderId: string | null
 }
 
+export interface GlobalDigitalHuman {
+    id: string
+    name: string
+    description: string | null
+    photoUrl: string | null
+    avatarImageUrl: string | null
+    avatarImageUrls: string[]
+    selectedIndex: number | null
+    previewVideoUrl: string | null
+    status: string
+    gender: string | null
+    folderId: string | null
+    createdAt: string
+}
+
 export interface GlobalFolder {
     id: string
     name: string
@@ -260,6 +275,23 @@ export function useGlobalLocations(folderId?: string | null) {
         data,
         isFetching: locationsQuery.isFetching || taskStatesQuery.isFetching,
     }
+}
+
+/**
+ * 获取中心资产库数字人列表
+ */
+export function useGlobalDigitalHumans(folderId?: string | null) {
+    return useQuery({
+        queryKey: queryKeys.globalAssets.digitalHumans(folderId),
+        queryFn: async () => {
+            const params = new URLSearchParams()
+            if (folderId) params.set('folderId', folderId)
+            const res = await fetch(`/api/asset-hub/digital-humans?${params}`)
+            if (!res.ok) throw new Error('Failed to fetch digital humans')
+            const data = await res.json()
+            return data.digitalHumans as GlobalDigitalHuman[]
+        },
+    })
 }
 
 /**

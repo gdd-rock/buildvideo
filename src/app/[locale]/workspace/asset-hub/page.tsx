@@ -19,12 +19,14 @@ import {
     useGlobalCharacters,
     useGlobalLocations,
     useGlobalVoices,
+    useGlobalDigitalHumans,
     useGlobalFolders,
     useSSE,
     useModifyCharacterImage,
     useModifyLocationImage,
     type GlobalCharacter,
 } from '@/lib/query/hooks'
+import DigitalHumanCreationModal from './components/DigitalHumanCreationModal'
 import { queryKeys } from '@/lib/query/keys'
 import { AppIcon } from '@/components/ui/icons'
 
@@ -40,8 +42,9 @@ export default function AssetHubPage() {
     const { data: characters = [], isLoading: charactersLoading } = useGlobalCharacters(selectedFolderId)
     const { data: locations = [], isLoading: locationsLoading } = useGlobalLocations(selectedFolderId)
     const { data: voices = [], isLoading: voicesLoading } = useGlobalVoices(selectedFolderId)
+    const { data: digitalHumans = [], isLoading: digitalHumansLoading } = useGlobalDigitalHumans(selectedFolderId)
 
-    const loading = foldersLoading || charactersLoading || locationsLoading || voicesLoading
+    const loading = foldersLoading || charactersLoading || locationsLoading || voicesLoading || digitalHumansLoading
     useSSE({ projectId: 'global-asset-hub', enabled: true })
 
     // Mutation hooks
@@ -70,6 +73,8 @@ export default function AssetHubPage() {
 
     // 音色库弹窗状态
     const [showAddVoice, setShowAddVoice] = useState(false)
+    // 数字人弹窗状态
+    const [showAddDigitalHuman, setShowAddDigitalHuman] = useState(false)
     const [voicePickerCharacterId, setVoicePickerCharacterId] = useState<string | null>(null)
 
     // 编辑角色弹窗状态
@@ -365,10 +370,12 @@ export default function AssetHubPage() {
                         characters={characters}
                         locations={locations}
                         voices={voices}
+                        digitalHumans={digitalHumans}
                         loading={loading}
                         onAddCharacter={() => setShowAddCharacter(true)}
                         onAddLocation={() => setShowAddLocation(true)}
                         onAddVoice={() => setShowAddVoice(true)}
+                        onAddDigitalHuman={() => setShowAddDigitalHuman(true)}
                         selectedFolderId={selectedFolderId}
                         onImageClick={setPreviewImage}
                         onImageEdit={handleOpenImageEdit}
@@ -491,6 +498,18 @@ export default function AssetHubPage() {
                     onSuccess={() => {
                         setShowAddVoice(false)
                         queryClient.invalidateQueries({ queryKey: queryKeys.globalAssets.voices() })
+                    }}
+                />
+            )}
+
+            {/* 新建数字人弹窗 */}
+            {showAddDigitalHuman && (
+                <DigitalHumanCreationModal
+                    folderId={selectedFolderId}
+                    onClose={() => setShowAddDigitalHuman(false)}
+                    onSuccess={() => {
+                        setShowAddDigitalHuman(false)
+                        queryClient.invalidateQueries({ queryKey: queryKeys.globalAssets.digitalHumans() })
                     }}
                 />
             )}

@@ -10,6 +10,7 @@ export {
     useGlobalCharacters,
     useGlobalLocations,
     useGlobalVoices,
+    useGlobalDigitalHumans,
     useGlobalFolders,
     useCreateFolder,
     useUpdateFolder,
@@ -20,6 +21,7 @@ export {
     type GlobalLocation,
     type GlobalLocationImage,
     type GlobalVoice,
+    type GlobalDigitalHuman,
     type GlobalFolder,
 } from './useGlobalAssets'
 export {

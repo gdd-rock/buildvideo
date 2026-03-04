@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { CharacterCard } from './CharacterCard'
 import { LocationCard } from './LocationCard'
 import { VoiceCard } from './VoiceCard'
+import { DigitalHumanCard } from './DigitalHumanCard'
 import TaskStatusInline from '@/components/task/TaskStatusInline'
 import { resolveTaskPresentationState } from '@/lib/task/presentation'
 import { AppIcon } from '@/components/ui/icons'
@@ -58,14 +59,27 @@ interface Voice {
     folderId: string | null
 }
 
+interface DigitalHuman {
+    id: string
+    name: string
+    description: string | null
+    photoUrl: string | null
+    avatarImageUrl: string | null
+    status: string
+    gender: string | null
+    folderId: string | null
+}
+
 interface AssetGridProps {
     characters: Character[]
     locations: Location[]
     voices: Voice[]
+    digitalHumans: DigitalHuman[]
     loading: boolean
     onAddCharacter: () => void
     onAddLocation: () => void
     onAddVoice: () => void
+    onAddDigitalHuman: () => void
     selectedFolderId: string | null
     onImageClick?: (url: string) => void
     onImageEdit?: (type: 'character' | 'location', id: string, name: string, imageIndex: number, appearanceIndex?: number) => void
@@ -84,10 +98,12 @@ export function AssetGrid({
     characters,
     locations,
     voices,
+    digitalHumans,
     loading,
     onAddCharacter,
     onAddLocation,
     onAddVoice,
+    onAddDigitalHuman,
     selectedFolderId: _selectedFolderId,
     onImageClick,
     onImageEdit,
@@ -107,11 +123,12 @@ export function AssetGrid({
         : null
     void _selectedFolderId
 
-    const [filter, setFilter] = useState<'all' | 'character' | 'location' | 'voice'>('all')
-    const [sectionPage, setSectionPage] = useState<{ character: number; location: number; voice: number }>({
+    const [filter, setFilter] = useState<'all' | 'character' | 'location' | 'voice' | 'digitalHuman'>('all')
+    const [sectionPage, setSectionPage] = useState<{ character: number; location: number; voice: number; digitalHuman: number }>({
         character: 1,
         location: 1,
         voice: 1,
+        digitalHuman: 1,
     })
 
     const pageSize = 40
@@ -126,15 +143,16 @@ export function AssetGrid({
         }
     }
 
-    const setPage = (type: 'character' | 'location' | 'voice', page: number) => {
+    const setPage = (type: 'character' | 'location' | 'voice' | 'digitalHuman', page: number) => {
         setSectionPage((prev) => ({ ...prev, [type]: page }))
     }
 
     const charactersPage = paginate(characters, sectionPage.character)
     const locationsPage = paginate(locations, sectionPage.location)
     const voicesPage = paginate(voices, sectionPage.voice)
+    const digitalHumansPage = paginate(digitalHumans, sectionPage.digitalHuman)
 
-    const renderPagination = (type: 'character' | 'location' | 'voice', page: number, totalPages: number) => {
+    const renderPagination = (type: 'character' | 'location' | 'voice' | 'digitalHuman', page: number, totalPages: number) => {
         if (totalPages <= 1) return null
         return (
             <div className="mt-4 flex items-center justify-end gap-2">
@@ -167,13 +185,14 @@ export function AssetGrid({
         )
     }
 
-    const isEmpty = characters.length === 0 && locations.length === 0 && voices.length === 0
+    const isEmpty = characters.length === 0 && locations.length === 0 && voices.length === 0 && digitalHumans.length === 0
 
     const tabs = [
         { id: 'all', label: t('allAssets') },
         { id: 'character', label: t('characters') },
         { id: 'location', label: t('locations') },
         { id: 'voice', label: t('voices') },
+        { id: 'digitalHuman', label: t('digitalHumans') },
     ]
 
     return (
@@ -198,7 +217,7 @@ export function AssetGrid({
                                 {tabs.map((tab) => (
                                     <button
                                         key={tab.id}
-                                        onClick={() => setFilter(tab.id as 'all' | 'character' | 'location' | 'voice')}
+                                        onClick={() => setFilter(tab.id as 'all' | 'character' | 'location' | 'voice' | 'digitalHuman')}
                                         className={`relative z-[1] px-4 py-1.5 text-sm rounded-md transition-colors cursor-pointer ${filter === tab.id ? 'text-[var(--glass-text-primary)] font-medium' : 'text-[var(--glass-text-tertiary)] hover:text-[var(--glass-text-secondary)]'}`}
                                     >
                                         {tab.label}
@@ -231,6 +250,13 @@ export function AssetGrid({
                     >
                         <PlusIcon className="w-4 h-4" />
                         <span>{t('addVoice')}</span>
+                    </button>
+                    <button
+                        onClick={onAddDigitalHuman}
+                        className="glass-btn-base glass-btn-primary px-4 py-2 rounded-lg text-sm"
+                    >
+                        <PlusIcon className="w-4 h-4" />
+                        <span>{t('addDigitalHuman')}</span>
                     </button>
                 </div>
             </div>
@@ -308,6 +334,26 @@ export function AssetGrid({
                                 ))}
                             </div>
                             {renderPagination('voice', voicesPage.page, voicesPage.totalPages)}
+                        </section>
+                    )}
+
+                    {/* 数字人区块 */}
+                    {(filter === 'all' || filter === 'digitalHuman') && digitalHumans.length > 0 && (
+                        <section>
+                            <h2 className="text-sm font-semibold text-[var(--glass-text-primary)] mb-3 flex items-center gap-2">
+                                {t('digitalHumans')}
+                                <span className="glass-chip glass-chip-neutral px-2 py-0.5">{digitalHumans.length}</span>
+                            </h2>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                                {digitalHumansPage.items.map((dh) => (
+                                    <DigitalHumanCard
+                                        key={dh.id}
+                                        digitalHuman={dh}
+                                        onImageClick={onImageClick}
+                                    />
+                                ))}
+                            </div>
+                            {renderPagination('digitalHuman', digitalHumansPage.page, digitalHumansPage.totalPages)}
                         </section>
                     )}
                 </div>
