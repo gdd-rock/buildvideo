@@ -40,7 +40,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
             where: { id: digitalHumanId },
             data: {
                 photoUrl: cosKey,
-                status: 'ready',
+                status: 'pending',
             }
         })
     } else {
@@ -52,7 +52,7 @@ export const POST = apiHandler(async (request: NextRequest) => {
                 gender: gender || null,
                 folderId: folderId || null,
                 photoUrl: cosKey,
-                status: 'ready',
+                status: 'pending',
             }
         })
     }

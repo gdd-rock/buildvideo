@@ -98,13 +98,13 @@ export function DigitalHumanCard({ digitalHuman, onImageClick }: DigitalHumanCar
                 <div className="flex items-center justify-between">
                     <h3 className="font-medium text-[var(--glass-text-primary)] text-sm truncate">{digitalHuman.name}</h3>
                     <div className="flex items-center gap-1">
-                        {(digitalHuman.status === 'pending' || digitalHuman.status === 'failed') && digitalHuman.photoUrl && (
+                        {digitalHuman.status !== 'generating' && digitalHuman.photoUrl && (
                             <button
                                 onClick={(e) => { e.stopPropagation(); generateMutation.mutate() }}
                                 disabled={generateMutation.isPending}
-                                className="glass-btn-base glass-btn-soft h-6 px-2 rounded-md text-[var(--glass-tone-info-fg)] flex items-center justify-center text-xs opacity-0 group-hover:opacity-100"
+                                className="glass-btn-base glass-btn-soft h-6 px-2 rounded-md text-[var(--glass-tone-info-fg)] flex items-center justify-center text-xs"
                             >
-                                {digitalHuman.status === 'failed' ? t('digitalHuman.regenerate') : t('generate')}
+                                {digitalHuman.status === 'ready' ? t('digitalHuman.regenerate') : t('generate')}
                             </button>
                         )}
                         <button
