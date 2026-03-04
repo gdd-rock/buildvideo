@@ -155,4 +155,8 @@ export const PROMPT_CATALOG: Record<PromptId, PromptCatalogEntry> = {
     pathStem: 'digital-human/dh_view_back',
     variableKeys: [],
   },
+  [PROMPT_IDS.DH_VIEW_SHEET]: {
+    pathStem: 'digital-human/dh_view_sheet',
+    variableKeys: [],
+  },
 }

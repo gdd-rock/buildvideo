@@ -124,6 +124,7 @@
         "viewFront": "Front",
         "viewSide": "Side",
         "viewBack": "Back",
+        "viewSheet": "Sheet",
         "versionHistory": "Version History",
         "noVersions": "No previous versions",
         "restore": "Restore"

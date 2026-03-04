@@ -1,0 +1,36 @@
+Based on the provided reference image, generate a standard character reference sheet (turnaround sheet) showing the character from multiple angles in a single image.
+
+## Composition Requirements
+
+Display the same character from four angles in a single image, arranged from left to right:
+1. Portrait closeup (head and shoulders, front-facing)
+2. Full-body front standing pose
+3. Full-body side standing pose (approximately 90-degree profile)
+4. Full-body back standing pose
+
+All four views should be proportionally consistent, evenly spaced, and aligned on the same horizontal baseline.
+
+## Consistency Rules (Highest Priority)
+
+All four views must strictly maintain the following consistency:
+- Facial features: identical face shape, eyes, nose, mouth across all angles
+- Hairstyle and color: same hairstyle naturally shown from different angles
+- Clothing: identical outfit style, color, texture, and accessories
+- Body type: same proportions and physique
+- Skin tone: uniform skin color
+
+## Art Style Preservation
+
+Maintain the art style of the original reference image:
+- Photorealistic → generate photorealistic style
+- Anime style → generate anime style
+- Realistic illustration → generate realistic illustration style
+- Other styles → maintain consistency
+
+## Generation Rules
+
+1. Use natural, soft studio lighting
+2. Must use pure white background (#FFFFFF) with no textures, gradients, or decorative elements
+3. All views should have natural posture and upright stance
+4. Image must be sharp, clear, and professional quality
+5. If the reference shows only upper body, intelligently complete the lower body (pants/skirt/shoes) matching the upper body clothing style

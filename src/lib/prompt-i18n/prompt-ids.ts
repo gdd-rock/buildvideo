@@ -30,6 +30,7 @@ export const PROMPT_IDS = {
   DH_VIEW_FRONT: 'dh_view_front',
   DH_VIEW_SIDE: 'dh_view_side',
   DH_VIEW_BACK: 'dh_view_back',
+  DH_VIEW_SHEET: 'dh_view_sheet',
 } as const
 
 export type PromptId = (typeof PROMPT_IDS)[keyof typeof PROMPT_IDS]

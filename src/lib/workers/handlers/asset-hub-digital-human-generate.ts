@@ -74,12 +74,13 @@ export async function handleAssetHubDigitalHumanGenerateTask(job: Job<TaskJobDat
     job.data.locale,
   )
 
-  // 4 个视图：头像、正面、侧面、背面
+  // 5 个视图：头像、正面、侧面、背面、合成参考图
   const DIGITAL_HUMAN_VIEWS = [
     { promptId: PROMPT_IDS.DH_VIEW_AVATAR, aspectRatio: '1:1', label: 'avatar' },
     { promptId: PROMPT_IDS.DH_VIEW_FRONT, aspectRatio: '3:4', label: 'front' },
     { promptId: PROMPT_IDS.DH_VIEW_SIDE, aspectRatio: '3:4', label: 'side' },
     { promptId: PROMPT_IDS.DH_VIEW_BACK, aspectRatio: '3:4', label: 'back' },
+    { promptId: PROMPT_IDS.DH_VIEW_SHEET, aspectRatio: '16:9', label: 'sheet' },
   ] as const
 
   const { apiKey: falApiKey } = await getProviderConfig(job.data.userId, 'fal')

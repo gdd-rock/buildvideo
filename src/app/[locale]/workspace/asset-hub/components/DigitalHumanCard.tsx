@@ -43,6 +43,7 @@ export function DigitalHumanCard({ digitalHuman, onImageClick }: DigitalHumanCar
         t('digitalHuman.viewFront'),
         t('digitalHuman.viewSide'),
         t('digitalHuman.viewBack'),
+        t('digitalHuman.viewSheet'),
     ]
 
     const generateMutation = useMutation({
@@ -101,7 +102,7 @@ export function DigitalHumanCard({ digitalHuman, onImageClick }: DigitalHumanCar
 
     const versions = versionsQuery.data?.versions || []
 
-    const hasMultiView = digitalHuman.avatarImageUrls && digitalHuman.avatarImageUrls.length === 4
+    const hasMultiView = digitalHuman.avatarImageUrls && digitalHuman.avatarImageUrls.length >= 4
     const displayUrl = hasMultiView
         ? digitalHuman.avatarImageUrls[activeViewIndex]
         : (digitalHuman.avatarImageUrl || digitalHuman.photoUrl)
