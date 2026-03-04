@@ -3,7 +3,6 @@ import { prisma } from '@/lib/prisma'
 import { requireUserAuth, isErrorResponse } from '@/lib/api-auth'
 import { apiHandler } from '@/lib/api-errors'
 import { getSignedUrl } from '@/lib/cos'
-import { decodeImageUrls } from '@/lib/contracts/image-urls-contract'
 
 // 获取数字人指定图片的 base64（解决前端 CORS 问题）
 export const GET = apiHandler(async (
@@ -28,7 +27,10 @@ export const GET = apiHandler(async (
     return NextResponse.json({ error: 'Not found' }, { status: 404 })
   }
 
-  const cosKeys = dh.avatarImageUrls ? decodeImageUrls(dh.avatarImageUrls) : []
+  let cosKeys: string[] = []
+  if (typeof dh.avatarImageUrls === 'string' && dh.avatarImageUrls) {
+    try { cosKeys = JSON.parse(dh.avatarImageUrls) as string[] } catch { /* ignore */ }
+  }
 
   // 如果指定了 index，只返回对应图片；否则返回全部
   const keysToFetch = index >= 0 && index < cosKeys.length
