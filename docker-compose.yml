@@ -53,8 +53,14 @@ services:
       REDIS_USERNAME: ""
       REDIS_PASSWORD: ""
       REDIS_TLS: ""
-      # 存储：默认本地存储
-      STORAGE_TYPE: local
+      # 存储：通过 .env 文件配置（默认 COS）
+      STORAGE_TYPE: ${STORAGE_TYPE:-cos}
+      COS_SECRET_ID: ${COS_SECRET_ID:-}
+      COS_SECRET_KEY: ${COS_SECRET_KEY:-}
+      COS_BUCKET: ${COS_BUCKET:-}
+      COS_REGION: ${COS_REGION:-}
+      COS_PREFIX: ${COS_PREFIX:-}
+      COS_PUBLIC_BASE: ${COS_PUBLIC_BASE:-}
       # 认证
       NEXTAUTH_URL: "https://buildvideo.ai"
       NEXTAUTH_SECRET: "buildvideo-default-secret-2026"
