@@ -125,38 +125,21 @@ export default function CharacterCreationForm({
 
   const selectedDH = readyDigitalHumans.find((dh) => dh.id === selectedDHId)
 
-  // 选中数字人后，将其图片加载为 base64 作为参考图
+  // 选中数字人后，通过服务端代理获取图片 base64（避免 CORS）
   const handleSelectDigitalHuman = useCallback(async (dh: DigitalHumanOption) => {
     setSelectedDHId(dh.id)
     if (!name.trim()) setName(dh.name)
 
     setLoadingDHImages(true)
     try {
-      // 优先使用第5张合成参考图（index 4），否则回退到全部图片
-      const urls = dh.avatarImageUrls.length >= 5
-        ? [dh.avatarImageUrls[4]]
-        : dh.avatarImageUrls.length > 0
-          ? dh.avatarImageUrls
-          : (dh.avatarImageUrl ? [dh.avatarImageUrl] : [])
-
-      const base64Images: string[] = []
-      for (const url of urls) {
-        try {
-          const res = await fetch(url)
-          const blob = await res.blob()
-          const base64 = await new Promise<string>((resolve) => {
-            const reader = new FileReader()
-            reader.onloadend = () => resolve(reader.result as string)
-            reader.readAsDataURL(blob)
-          })
-          base64Images.push(base64)
-        } catch {
-          // skip failed images
+      // 优先使用第5张合成参考图（index 4），否则获取全部
+      const indexParam = dh.avatarImageUrls.length >= 5 ? '?index=4' : ''
+      const res = await fetch(`/api/asset-hub/digital-humans/${dh.id}/image-base64${indexParam}`)
+      if (res.ok) {
+        const data = await res.json() as { images: string[] }
+        if (data.images.length > 0) {
+          setReferenceImagesBase64(data.images)
         }
-      }
-
-      if (base64Images.length > 0) {
-        setReferenceImagesBase64(base64Images)
       }
     } finally {
       setLoadingDHImages(false)
