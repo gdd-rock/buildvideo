@@ -18,7 +18,7 @@ Maintain the art style of the original image:
 ## Generation Rules
 
 1. Use natural, soft studio lighting
-2. Solid or clean background
+2. Must use a pure white background (#FFFFFF), no textures, gradients, or decorative elements
 3. Face details sharp and clear, facial features accurately reproduced
 4. Hairstyle consistent with the reference image
 5. Generated image must be sharp, clear, and professional quality

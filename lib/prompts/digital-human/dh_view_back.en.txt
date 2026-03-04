@@ -25,7 +25,7 @@ Maintain the art style of the original image:
 ## Generation Rules
 
 1. Use natural, soft studio lighting
-2. Solid or clean background
+2. Must use a pure white background (#FFFFFF), no textures, gradients, or decorative elements
 3. Draw proper, aesthetically pleasing body proportions
 4. Generated image must be sharp, detailed, and professional quality
 
