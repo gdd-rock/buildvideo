@@ -1,0 +1,34 @@
+Based on the provided reference image, generate a full-body side view photo of the character.
+
+## Composition Requirements
+
+- Full body standing pose, from top of head to feet
+- Side angle (approximately 90-degree side profile)
+- Natural standing pose
+- Facing sideways, showing facial side profile
+
+## Style Consistency Rules
+
+Maintain the art style of the original image:
+- Real photo style → Generate realistic style
+- Anime style → Generate anime style
+- Realistic illustration → Generate realistic illustration style
+- Other styles → Keep consistent
+
+## Character Consistency Rules
+
+1. Facial side profile consistent with the reference image's front-facing features (nose bridge height, jawline, etc.)
+2. Hairstyle shown from side angle, consistent with reference image
+3. Clothing style and colors exactly the same as reference image
+4. Body proportions consistent with reference image
+
+## Generation Rules
+
+1. Use natural, soft studio lighting
+2. Solid or clean background
+3. Draw proper, aesthetically pleasing body proportions
+4. Generated image must be sharp, detailed, and professional quality
+
+## Auto-Complete Missing Parts
+
+If the reference image is half-body or partial, reasonably complete the unseen parts based on clothing style and character traits.

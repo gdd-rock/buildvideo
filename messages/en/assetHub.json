@@ -119,6 +119,13 @@
         "statusReady": "Ready",
         "statusFailed": "Failed",
         "regenerate": "Regenerate",
-        "noPhoto": "No photo"
+        "noPhoto": "No photo",
+        "viewAvatar": "Avatar",
+        "viewFront": "Front",
+        "viewSide": "Side",
+        "viewBack": "Back",
+        "versionHistory": "Version History",
+        "noVersions": "No previous versions",
+        "restore": "Restore"
     }
 }

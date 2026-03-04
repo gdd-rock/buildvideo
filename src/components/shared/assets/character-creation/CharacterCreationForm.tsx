@@ -1,12 +1,15 @@
 'use client'
 
+import { useState, useEffect, useCallback } from 'react'
 import type { DragEvent, RefObject } from 'react'
 import { useTranslations } from 'next-intl'
+import { useQuery } from '@tanstack/react-query'
 import { ART_STYLES } from '@/lib/constants'
 import CharacterCreationPreview from './CharacterCreationPreview'
 import { AppIcon } from '@/components/ui/icons'
 
 type Mode = 'asset-hub' | 'project'
+type CreateMode = 'reference' | 'description' | 'digitalHuman'
 
 interface AvailableCharacter {
   id: string
@@ -14,10 +17,17 @@ interface AvailableCharacter {
   appearances: unknown[]
 }
 
+interface DigitalHumanOption {
+  id: string
+  name: string
+  avatarImageUrl: string | null
+  avatarImageUrls: string[]
+}
+
 interface CharacterCreationFormProps {
   mode: Mode
-  createMode: 'reference' | 'description'
-  setCreateMode: (mode: 'reference' | 'description') => void
+  createMode: CreateMode
+  setCreateMode: (mode: CreateMode) => void
   name: string
   setName: (value: string) => void
   description: string
@@ -27,6 +37,7 @@ interface CharacterCreationFormProps {
   artStyle: string
   setArtStyle: (value: string) => void
   referenceImagesBase64: string[]
+  setReferenceImagesBase64: (images: string[]) => void
   referenceSubMode: 'direct' | 'extract'
   setReferenceSubMode: (mode: 'direct' | 'extract') => void
   isSubAppearance: boolean
@@ -70,6 +81,7 @@ export default function CharacterCreationForm({
   artStyle,
   setArtStyle,
   referenceImagesBase64,
+  setReferenceImagesBase64,
   referenceSubMode,
   setReferenceSubMode,
   isSubAppearance,
@@ -93,20 +105,75 @@ export default function CharacterCreationForm({
 }: CharacterCreationFormProps) {
   const t = useTranslations('assetModal')
 
+  // 数字人选择相关
+  const [selectedDHId, setSelectedDHId] = useState<string | null>(null)
+  const [loadingDHImages, setLoadingDHImages] = useState(false)
+
+  const { data: dhData } = useQuery<{ digitalHumans: DigitalHumanOption[] }>({
+    queryKey: ['digital-humans-for-picker'],
+    queryFn: async () => {
+      const res = await fetch('/api/asset-hub/digital-humans')
+      if (!res.ok) throw new Error('Failed to fetch')
+      return res.json()
+    },
+    enabled: createMode === 'digitalHuman',
+  })
+
+  const readyDigitalHumans = (dhData?.digitalHumans || []).filter(
+    (dh) => dh.avatarImageUrl || (dh.avatarImageUrls && dh.avatarImageUrls.length > 0),
+  )
+
+  const selectedDH = readyDigitalHumans.find((dh) => dh.id === selectedDHId)
+
+  // 选中数字人后，将其图片加载为 base64 作为参考图
+  const handleSelectDigitalHuman = useCallback(async (dh: DigitalHumanOption) => {
+    setSelectedDHId(dh.id)
+    if (!name.trim()) setName(dh.name)
+
+    setLoadingDHImages(true)
+    try {
+      const urls = dh.avatarImageUrls.length > 0
+        ? dh.avatarImageUrls
+        : (dh.avatarImageUrl ? [dh.avatarImageUrl] : [])
+
+      const base64Images: string[] = []
+      for (const url of urls) {
+        try {
+          const res = await fetch(url)
+          const blob = await res.blob()
+          const base64 = await new Promise<string>((resolve) => {
+            const reader = new FileReader()
+            reader.onloadend = () => resolve(reader.result as string)
+            reader.readAsDataURL(blob)
+          })
+          base64Images.push(base64)
+        } catch {
+          // skip failed images
+        }
+      }
+
+      if (base64Images.length > 0) {
+        setReferenceImagesBase64(base64Images)
+      }
+    } finally {
+      setLoadingDHImages(false)
+    }
+  }, [name, setName, setReferenceImagesBase64])
+
   return (
     <div className="space-y-5">
       <div className="mb-5">
         {(() => {
-          const tabs = ['description', 'reference'] as const
+          const tabs = ['description', 'reference', 'digitalHuman'] as const
           const activeIdx = tabs.indexOf(createMode)
           return (
             <div className="rounded-lg p-0.5" style={{ background: 'rgba(0,0,0,0.04)' }}>
-              <div className="relative grid gap-1" style={{ gridTemplateColumns: 'repeat(2, minmax(0, 1fr))' }}>
+              <div className="relative grid gap-1" style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}>
                 <div
                   className="absolute bottom-0.5 top-0.5 rounded-md bg-white transition-transform duration-200"
                   style={{
                     boxShadow: '0 1px 4px rgba(0,0,0,0.15), 0 0 0 0.5px rgba(0,0,0,0.06)',
-                    width: 'calc(100% / 2)',
+                    width: 'calc(100% / 3)',
                     transform: `translateX(${activeIdx * 100}%)`,
                   }}
                 />
@@ -123,6 +190,13 @@ export default function CharacterCreationForm({
                 >
                   <PhotoIcon className="w-4 h-4" />
                   <span>{t('character.modeReference')}</span>
+                </button>
+                <button
+                  onClick={() => setCreateMode('digitalHuman')}
+                  className={`relative z-[1] flex items-center justify-center gap-2 rounded-md py-2 px-4 text-sm font-medium transition-colors cursor-pointer ${createMode === 'digitalHuman' ? 'text-[var(--glass-text-primary)]' : 'text-[var(--glass-text-tertiary)] hover:text-[var(--glass-text-secondary)]'}`}
+                >
+                  <AppIcon name="user" className="w-4 h-4" />
+                  <span>{t('character.modeDigitalHuman')}</span>
                 </button>
               </div>
             </div>
@@ -354,6 +428,61 @@ export default function CharacterCreationForm({
             {isSubmitting ? t('common.adding') : t('common.add')}
           </button>
         </>
+      )}
+
+      {createMode === 'digitalHuman' && (
+        <div className="glass-surface-soft rounded-xl p-4 space-y-3 border border-[var(--glass-stroke-base)]">
+          <div className="flex items-center gap-2 text-sm font-medium text-[var(--glass-tone-info-fg)]">
+            <AppIcon name="user" className="w-4 h-4" />
+            <span>{t('character.selectDigitalHuman')}</span>
+          </div>
+
+          {readyDigitalHumans.length === 0 ? (
+            <p className="text-sm text-[var(--glass-text-tertiary)] py-4 text-center">
+              {t('character.noDigitalHumans')}
+            </p>
+          ) : (
+            <div className="grid grid-cols-3 gap-2 max-h-48 overflow-y-auto">
+              {readyDigitalHumans.map((dh) => (
+                <button
+                  key={dh.id}
+                  onClick={() => void handleSelectDigitalHuman(dh)}
+                  disabled={loadingDHImages}
+                  className={`relative rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
+                    selectedDHId === dh.id
+                      ? 'border-[var(--glass-tone-info-fg)] ring-1 ring-[var(--glass-tone-info-fg)]'
+                      : 'border-transparent hover:border-[var(--glass-stroke-focus)]'
+                  }`}
+                >
+                  <img
+                    src={dh.avatarImageUrl || dh.avatarImageUrls[0]}
+                    alt={dh.name}
+                    className="w-full aspect-square object-cover"
+                  />
+                  <span className="absolute bottom-0 inset-x-0 bg-black/60 text-white text-[11px] py-0.5 text-center truncate px-1">
+                    {dh.name}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+
+          {selectedDH && (
+            <div className="text-xs text-[var(--glass-text-secondary)] flex items-center gap-1">
+              <AppIcon name="check" className="w-3 h-3 text-[var(--glass-tone-success-fg)]" />
+              {t('character.selectedDH')}: {selectedDH.name}
+              {loadingDHImages && <span className="ml-1 animate-pulse">...</span>}
+            </div>
+          )}
+
+          <button
+            onClick={handleCreateWithReference}
+            disabled={isSubmitting || !name.trim() || referenceImagesBase64.length === 0 || loadingDHImages}
+            className="glass-btn-base glass-btn-primary w-full px-4 py-2.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed text-sm"
+          >
+            {isSubmitting ? t('common.creating') : t('character.convertToSheet')}
+          </button>
+        </div>
       )}
     </div>
   )

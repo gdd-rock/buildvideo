@@ -29,7 +29,7 @@ export function CharacterCreationModal({
 }: CharacterCreationModalProps) {
   const t = useTranslations('assetModal')
 
-  const [createMode, setCreateMode] = useState<'reference' | 'description'>('description')
+  const [createMode, setCreateMode] = useState<'reference' | 'description' | 'digitalHuman'>('description')
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [aiInstruction, setAiInstruction] = useState('')
@@ -189,6 +189,7 @@ export function CharacterCreationModal({
             artStyle={artStyle}
             setArtStyle={(value) => setArtStyle(value)}
             referenceImagesBase64={referenceImagesBase64}
+            setReferenceImagesBase64={(images) => setReferenceImagesBase64(images)}
             referenceSubMode={referenceSubMode}
             setReferenceSubMode={(value) => setReferenceSubMode(value)}
             isSubAppearance={isSubAppearance}

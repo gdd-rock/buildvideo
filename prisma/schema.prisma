@@ -958,14 +958,30 @@ model GlobalDigitalHuman {
   createdAt           DateTime @default(now())
   updatedAt           DateTime @updatedAt
 
-  user   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  folder GlobalAssetFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder   GlobalAssetFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  versions DigitalHumanVersion[]
 
   @@index([userId])
   @@index([folderId])
   @@index([photoMediaId])
   @@index([previewVideoMediaId])
   @@map("global_digital_humans")
+}
+
+model DigitalHumanVersion {
+  id              String   @id @default(uuid())
+  digitalHumanId  String
+  version         Int      // 版本号，从 1 递增
+  avatarImageUrl  String?  @db.Text
+  avatarImageUrls String?  @db.Text // JSON array
+  createdAt       DateTime @default(now())
+
+  digitalHuman GlobalDigitalHuman @relation(fields: [digitalHumanId], references: [id], onDelete: Cascade)
+
+  @@unique([digitalHumanId, version])
+  @@index([digitalHumanId])
+  @@map("digital_human_versions")
 }
 
 model MediaObject {

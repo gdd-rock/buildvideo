@@ -31,6 +31,25 @@ export async function handleAssetHubDigitalHumanGenerateTask(job: Job<TaskJobDat
   if (!dh) throw new Error('Digital human not found')
   if (!dh.photoUrl) throw new Error('Digital human has no photo')
 
+  // 如果已有生成结果，先存档为历史版本
+  if (dh.avatarImageUrl && dh.status === 'ready') {
+    const lastVersion = await prisma.digitalHumanVersion.findFirst({
+      where: { digitalHumanId },
+      orderBy: { version: 'desc' },
+      select: { version: true },
+    })
+    const nextVersion = (lastVersion?.version ?? 0) + 1
+
+    await prisma.digitalHumanVersion.create({
+      data: {
+        digitalHumanId,
+        version: nextVersion,
+        avatarImageUrl: dh.avatarImageUrl,
+        avatarImageUrls: dh.avatarImageUrls,
+      },
+    })
+  }
+
   // 标记为生成中
   await prisma.globalDigitalHuman.update({
     where: { id: digitalHumanId },
@@ -55,15 +74,13 @@ export async function handleAssetHubDigitalHumanGenerateTask(job: Job<TaskJobDat
     job.data.locale,
   )
 
-  // 使用照片作为参考图，生成数字人形象图
-  const basePrompt = buildPrompt({
-    promptId: PROMPT_IDS.CHARACTER_REFERENCE_TO_SHEET,
-    locale: job.data.locale,
-  })
-  let prompt = basePrompt
-  if (artStyle) {
-    prompt = `${prompt}，${artStyle}`
-  }
+  // 4 个视图：头像、正面、侧面、背面
+  const DIGITAL_HUMAN_VIEWS = [
+    { promptId: PROMPT_IDS.DH_VIEW_AVATAR, aspectRatio: '1:1', label: 'avatar' },
+    { promptId: PROMPT_IDS.DH_VIEW_FRONT, aspectRatio: '3:4', label: 'front' },
+    { promptId: PROMPT_IDS.DH_VIEW_SIDE, aspectRatio: '3:4', label: 'side' },
+    { promptId: PROMPT_IDS.DH_VIEW_BACK, aspectRatio: '3:4', label: 'back' },
+  ] as const
 
   const { apiKey: falApiKey } = await getProviderConfig(job.data.userId, 'fal')
 
@@ -73,11 +90,18 @@ export async function handleAssetHubDigitalHumanGenerateTask(job: Job<TaskJobDat
     displayMode: 'detail',
   })
 
-  const imageCount = 3
+  const imageCount = DIGITAL_HUMAN_VIEWS.length
   const cosKeys: string[] = []
 
   for (let i = 0; i < imageCount; i++) {
-    await assertTaskActive(job, `digital_human_generate_${i + 1}`)
+    const view = DIGITAL_HUMAN_VIEWS[i]
+    await assertTaskActive(job, `digital_human_generate_${view.label}`)
+
+    const viewPrompt = buildPrompt({
+      promptId: view.promptId,
+      locale: job.data.locale,
+    })
+    const prompt = artStyle ? `${viewPrompt}，${artStyle}` : viewPrompt
 
     try {
       const result = await generateImage(
@@ -86,7 +110,7 @@ export async function handleAssetHubDigitalHumanGenerateTask(job: Job<TaskJobDat
         prompt,
         {
           referenceImages: [photoSignedUrl],
-          aspectRatio: '3:4',
+          aspectRatio: view.aspectRatio,
         },
       )
 
@@ -97,7 +121,7 @@ export async function handleAssetHubDigitalHumanGenerateTask(job: Job<TaskJobDat
       if (result.async && requestId && endpoint) {
         if (!falApiKey) throw new Error('Async result requires falApiKey')
         for (let attempt = 0; attempt < POLL_MAX_ATTEMPTS; attempt++) {
-          await assertTaskActive(job, `digital_human_poll_${i + 1}_${attempt + 1}`)
+          await assertTaskActive(job, `digital_human_poll_${view.label}_${attempt + 1}`)
           await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS))
           const status = await queryFalStatus(endpoint, requestId, falApiKey)
           if (status.completed && status.resultUrl) {
@@ -113,10 +137,10 @@ export async function handleAssetHubDigitalHumanGenerateTask(job: Job<TaskJobDat
 
       if (result.success && finalImageUrl) {
         const imgRes = await fetchWithTimeoutAndRetry(finalImageUrl, {
-          logPrefix: `[digital-human:${i + 1}]`,
+          logPrefix: `[digital-human:${view.label}]`,
         })
         const buffer = Buffer.from(await imgRes.arrayBuffer())
-        const key = generateUniqueKey(`digital-human-avatar-${Date.now()}-${i}`, 'jpg')
+        const key = generateUniqueKey(`digital-human-${view.label}-${Date.now()}-${i}`, 'jpg')
         const cosKey = await uploadToCOS(buffer, key)
         cosKeys.push(cosKey)
       }
@@ -125,7 +149,7 @@ export async function handleAssetHubDigitalHumanGenerateTask(job: Job<TaskJobDat
     }
 
     await reportTaskProgress(job, 35 + Math.floor(((i + 1) / imageCount) * 50), {
-      stage: `digital_human_generate_${i + 1}_done`,
+      stage: `digital_human_generate_${view.label}_done`,
     })
   }
 

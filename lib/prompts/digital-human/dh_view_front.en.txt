@@ -1,0 +1,32 @@
+Based on the provided reference image, generate a full-body front view photo of the character.
+
+## Composition Requirements
+
+- Full body standing pose, from top of head to feet
+- Front-facing angle, facing the camera
+- Natural standing pose, arms relaxed at sides
+- Eyes looking directly at camera, natural calm expression
+
+## Style Consistency Rules
+
+Maintain the art style of the original image:
+- Real photo style → Generate realistic style
+- Anime style → Generate anime style
+- Realistic illustration → Generate realistic illustration style
+- Other styles → Keep consistent
+
+## Generation Rules
+
+1. Use natural, soft studio lighting
+2. Solid or clean background
+3. Draw proper, aesthetically pleasing body proportions
+4. Facial features consistent with the reference image
+5. Clothing style and colors consistent with the reference image
+6. Generated image must be sharp, detailed, and professional quality
+
+## Auto-Complete Missing Parts
+
+If the reference image is half-body or partial, reasonably complete the unseen parts based on clothing style and character traits:
+- **Missing lower body**: Infer and draw matching pants/skirt based on upper garment style
+- **Missing feet**: Add appropriate footwear based on overall outfit style
+- Keep overall style consistent

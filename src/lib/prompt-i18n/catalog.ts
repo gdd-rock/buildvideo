@@ -139,4 +139,20 @@ export const PROMPT_CATALOG: Record<PromptId, PromptCatalogEntry> = {
     pathStem: 'novel-promotion/voice_analysis',
     variableKeys: ['input', 'characters_lib_name', 'characters_introduction', 'storyboard_json'],
   },
+  [PROMPT_IDS.DH_VIEW_AVATAR]: {
+    pathStem: 'digital-human/dh_view_avatar',
+    variableKeys: [],
+  },
+  [PROMPT_IDS.DH_VIEW_FRONT]: {
+    pathStem: 'digital-human/dh_view_front',
+    variableKeys: [],
+  },
+  [PROMPT_IDS.DH_VIEW_SIDE]: {
+    pathStem: 'digital-human/dh_view_side',
+    variableKeys: [],
+  },
+  [PROMPT_IDS.DH_VIEW_BACK]: {
+    pathStem: 'digital-human/dh_view_back',
+    variableKeys: [],
+  },
 }

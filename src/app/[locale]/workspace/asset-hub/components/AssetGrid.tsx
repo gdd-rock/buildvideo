@@ -65,6 +65,7 @@ interface DigitalHuman {
     description: string | null
     photoUrl: string | null
     avatarImageUrl: string | null
+    avatarImageUrls: string[]
     status: string
     gender: string | null
     folderId: string | null

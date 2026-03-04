@@ -5,10 +5,19 @@ import { ApiError, apiHandler } from '@/lib/api-errors'
 import { getSignedUrl } from '@/lib/cos'
 
 function signDigitalHuman(dh: Record<string, unknown>) {
+    let signedAvatarImageUrls: string[] = []
+    if (typeof dh.avatarImageUrls === 'string' && dh.avatarImageUrls) {
+        try {
+            const parsed = JSON.parse(dh.avatarImageUrls) as string[]
+            signedAvatarImageUrls = parsed.map((url) => getSignedUrl(url))
+        } catch { /* ignore parse errors */ }
+    }
+
     return {
         ...dh,
         photoUrl: dh.photoUrl ? getSignedUrl(dh.photoUrl as string) : null,
         avatarImageUrl: dh.avatarImageUrl ? getSignedUrl(dh.avatarImageUrl as string) : null,
+        avatarImageUrls: signedAvatarImageUrls,
         previewVideoUrl: dh.previewVideoUrl ? getSignedUrl(dh.previewVideoUrl as string) : null,
     }
 }

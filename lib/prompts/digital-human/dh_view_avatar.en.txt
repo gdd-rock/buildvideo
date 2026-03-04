@@ -1,0 +1,24 @@
+Based on the provided reference image, generate a close-up headshot portrait of the character.
+
+## Composition Requirements
+
+- Head and shoulders close-up (from shoulders up)
+- Face centered, occupying the main area of the frame
+- Front-facing angle, eyes looking directly at the camera
+- Natural, calm expression
+
+## Style Consistency Rules
+
+Maintain the art style of the original image:
+- Real photo style → Generate realistic style
+- Anime style → Generate anime style
+- Realistic illustration → Generate realistic illustration style
+- Other styles → Keep consistent
+
+## Generation Rules
+
+1. Use natural, soft studio lighting
+2. Solid or clean background
+3. Face details sharp and clear, facial features accurately reproduced
+4. Hairstyle consistent with the reference image
+5. Generated image must be sharp, clear, and professional quality

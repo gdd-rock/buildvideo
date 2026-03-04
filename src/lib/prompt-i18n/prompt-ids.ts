@@ -26,6 +26,10 @@ export const PROMPT_IDS = {
   NP_SINGLE_PANEL_IMAGE: 'np_single_panel_image',
   NP_STORYBOARD_EDIT: 'np_storyboard_edit',
   NP_VOICE_ANALYSIS: 'np_voice_analysis',
+  DH_VIEW_AVATAR: 'dh_view_avatar',
+  DH_VIEW_FRONT: 'dh_view_front',
+  DH_VIEW_SIDE: 'dh_view_side',
+  DH_VIEW_BACK: 'dh_view_back',
 } as const
 
 export type PromptId = (typeof PROMPT_IDS)[keyof typeof PROMPT_IDS]
