@@ -56,6 +56,17 @@ export function DigitalHumanCreationModal({ folderId, onClose, onSuccess }: Digi
                 throw new Error(data.error || 'Upload failed')
             }
 
+            const data = await res.json()
+
+            // 自动触发 AI 生成数字人形象
+            if (data.digitalHuman?.id) {
+                fetch('/api/asset-hub/digital-humans/generate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ digitalHumanId: data.digitalHuman.id }),
+                }).catch(() => { /* 生成失败不阻塞创建流程 */ })
+            }
+
             queryClient.invalidateQueries({ queryKey: queryKeys.globalAssets.digitalHumans() })
             onSuccess()
         } catch (error) {

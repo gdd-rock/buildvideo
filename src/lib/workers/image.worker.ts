@@ -6,6 +6,7 @@ import { reportTaskProgress, withTaskLifecycle } from './shared'
 import {
   handleAssetHubImageTask,
   handleAssetHubModifyTask,
+  handleAssetHubDigitalHumanGenerateTask,
   handleCharacterImageTask,
   handleLocationImageTask,
   handleModifyAssetImageTask,
@@ -40,6 +41,8 @@ async function processImageTask(job: Job<TaskJobData>) {
       return await handlePanelImageTask(job)
     case TASK_TYPE.PANEL_VARIANT:
       return await handlePanelVariantTask(job)
+    case TASK_TYPE.ASSET_HUB_DIGITAL_HUMAN_GENERATE:
+      return await handleAssetHubDigitalHumanGenerateTask(job)
     default:
       throw new Error(`Unsupported image task type: ${job.data.type}`)
   }

@@ -27,6 +27,23 @@ export function DigitalHumanCard({ digitalHuman, onImageClick }: DigitalHumanCar
     const queryClient = useQueryClient()
     const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
+    const generateMutation = useMutation({
+        mutationFn: async () => {
+            const res = await fetch('/api/asset-hub/digital-humans/generate', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ digitalHumanId: digitalHuman.id }),
+            })
+            if (!res.ok) {
+                const data = await res.json()
+                throw new Error(data.error || 'Failed to generate')
+            }
+        },
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: queryKeys.globalAssets.digitalHumans() })
+        },
+    })
+
     const deleteMutation = useMutation({
         mutationFn: async () => {
             const res = await fetch(`/api/asset-hub/digital-humans/${digitalHuman.id}`, { method: 'DELETE' })
@@ -80,12 +97,23 @@ export function DigitalHumanCard({ digitalHuman, onImageClick }: DigitalHumanCar
             <div className="p-3">
                 <div className="flex items-center justify-between">
                     <h3 className="font-medium text-[var(--glass-text-primary)] text-sm truncate">{digitalHuman.name}</h3>
-                    <button
-                        onClick={() => setShowDeleteConfirm(true)}
-                        className="glass-btn-base glass-btn-soft h-6 w-6 rounded-md text-[var(--glass-tone-danger-fg)] flex items-center justify-center opacity-0 group-hover:opacity-100"
-                    >
-                        <AppIcon name="trash" className="w-4 h-4" />
-                    </button>
+                    <div className="flex items-center gap-1">
+                        {(digitalHuman.status === 'pending' || digitalHuman.status === 'failed') && digitalHuman.photoUrl && (
+                            <button
+                                onClick={(e) => { e.stopPropagation(); generateMutation.mutate() }}
+                                disabled={generateMutation.isPending}
+                                className="glass-btn-base glass-btn-soft h-6 px-2 rounded-md text-[var(--glass-tone-info-fg)] flex items-center justify-center text-xs opacity-0 group-hover:opacity-100"
+                            >
+                                {digitalHuman.status === 'failed' ? t('digitalHuman.regenerate') : t('generate')}
+                            </button>
+                        )}
+                        <button
+                            onClick={() => setShowDeleteConfirm(true)}
+                            className="glass-btn-base glass-btn-soft h-6 w-6 rounded-md text-[var(--glass-tone-danger-fg)] flex items-center justify-center opacity-0 group-hover:opacity-100"
+                        >
+                            <AppIcon name="trash" className="w-4 h-4" />
+                        </button>
+                    </div>
                 </div>
                 {digitalHuman.description && (
                     <p className="mt-1 text-xs text-[var(--glass-text-secondary)] line-clamp-2">{digitalHuman.description}</p>
