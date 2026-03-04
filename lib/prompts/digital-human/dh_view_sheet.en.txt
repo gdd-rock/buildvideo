@@ -1,23 +1,30 @@
-Based on the provided reference image, generate a standard character reference sheet (turnaround sheet) showing the character from multiple angles in a single image.
+Based on the provided reference image, generate a 16:9 landscape widescreen character reference sheet (turnaround sheet).
 
-## Composition Requirements
+## Layout (Strict Compliance Required)
 
-Display the same character from four angles in a single image, arranged from left to right:
-1. Portrait closeup (head and shoulders, front-facing)
-2. Full-body front standing pose
-3. Full-body side standing pose (approximately 90-degree profile)
-4. Full-body back standing pose
+The image is divided into two regions, left and right:
 
-All four views should be proportionally consistent, evenly spaced, and aligned on the same horizontal baseline.
+[Left Region — 40% of image width]
+- Character face closeup portrait, front-facing
+- Head and shoulders composition, face centered, eyes looking directly at camera
+- Natural calm expression, sharp and clear facial details
+
+[Right Region — 60% of image width]
+- Three full-body views of the same character, arranged left to right:
+  1. Front standing full body
+  2. 45-degree side angle full body
+  3. Back standing full body
+- All three full-body views should be the same scale, evenly spaced, with feet aligned on the same horizontal baseline
 
 ## Consistency Rules (Highest Priority)
 
-All four views must strictly maintain the following consistency:
-- Facial features: identical face shape, eyes, nose, mouth across all angles
+The left closeup and right three-view figures must strictly maintain:
+- Facial features: identical face shape, eyes, nose, mouth across all views
 - Hairstyle and color: same hairstyle naturally shown from different angles
-- Clothing: identical outfit style, color, texture, and accessories
+- Clothing and accessories: identical outfit style, color, texture, and accessories
 - Body type: same proportions and physique
 - Skin tone: uniform skin color
+- Expression: consistent natural expression
 
 ## Art Style Preservation
 
