@@ -38,7 +38,12 @@
     "confirmAdmin": "Are you sure you want to set this user as admin?",
     "balance": "Balance",
     "totalSpent": "Total Spent",
-    "lastActive": "Last Active"
+    "lastActive": "Last Active",
+    "resetPassword": "Reset Password",
+    "resetPasswordFor": "Reset password for {name}",
+    "newPasswordPlaceholder": "Enter new password (min 6 chars)",
+    "confirmReset": "Confirm Reset",
+    "resetSuccess": "Password reset successfully"
   },
   "userDetail": {
     "title": "User Detail",
@@ -151,6 +156,7 @@
     "next": "Next",
     "page": "Page {current} / {total}",
     "accessDenied": "Access Denied",
-    "accessDeniedDesc": "You do not have admin privileges. Please contact an administrator."
+    "accessDeniedDesc": "You do not have admin privileges. Please contact an administrator.",
+    "cancel": "Cancel"
   }
 }

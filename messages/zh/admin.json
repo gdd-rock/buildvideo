@@ -35,7 +35,12 @@
     "enable": "启用",
     "search": "搜索用户名或邮箱...",
     "confirmDisable": "确定要禁用该用户吗？",
-    "confirmAdmin": "确定要将该用户设为管理员吗？"
+    "confirmAdmin": "确定要将该用户设为管理员吗？",
+    "resetPassword": "重置密码",
+    "resetPasswordFor": "重置用户 {name} 的密码",
+    "newPasswordPlaceholder": "输入新密码（至少6位）",
+    "confirmReset": "确认重置",
+    "resetSuccess": "密码重置成功"
   },
   "projects": {
     "title": "项目管理",
@@ -148,6 +153,7 @@
     "next": "下一页",
     "page": "第 {current} / {total} 页",
     "accessDenied": "无权访问",
-    "accessDeniedDesc": "您没有管理员权限，请联系管理员。"
+    "accessDeniedDesc": "您没有管理员权限，请联系管理员。",
+    "cancel": "取消"
   }
 }

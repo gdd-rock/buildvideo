@@ -179,8 +179,15 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [detailsLoading, setDetailsLoading] = useState(false)
 
-  // 主要分区：扣费记录 / API配置
-  const [activeSection, setActiveSection] = useState<'billing' | 'apiConfig'>('apiConfig')
+  // 密码修改
+  const [currentPwd, setCurrentPwd] = useState('')
+  const [newPwd, setNewPwd] = useState('')
+  const [confirmPwd, setConfirmPwd] = useState('')
+  const [pwdChanging, setPwdChanging] = useState(false)
+  const [pwdMsg, setPwdMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+
+  // 主要分区：扣费记录 / API配置 / 修改密码
+  const [activeSection, setActiveSection] = useState<'billing' | 'apiConfig' | 'password'>('apiConfig')
   // 扣费记录内的子视图
   const [billingView, setBillingView] = useState<'transactions' | 'projects'>('transactions')
   const [projectViewMode, setProjectViewMode] = useState<'summary' | 'records'>('summary')
@@ -359,6 +366,17 @@ export default function ProfilePage() {
                   <AppIcon name="receipt" className="w-5 h-5" />
                   <span className="font-medium">{t('billingRecords')}</span>
                 </button>
+
+                <button
+                  onClick={() => setActiveSection('password')}
+                  className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl text-left transition-all cursor-pointer ${activeSection === 'password'
+                    ? 'glass-btn-base glass-btn-tone-info'
+                    : 'text-[var(--glass-text-secondary)] hover:bg-[var(--glass-bg-muted)]'
+                    }`}
+                >
+                  <AppIcon name="lock" className="w-5 h-5" />
+                  <span className="font-medium">{t('changePassword')}</span>
+                </button>
               </nav>
 
               {/* 退出登录 */}
@@ -378,6 +396,75 @@ export default function ProfilePage() {
 
               {activeSection === 'apiConfig' ? (
                 <ApiConfigTab />
+              ) : activeSection === 'password' ? (
+                <div className="p-6">
+                  <h3 className="text-lg font-semibold text-[var(--glass-text-primary)] mb-6">{t('changePassword')}</h3>
+                  <div className="max-w-md space-y-4">
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--glass-text-secondary)] mb-1.5">{t('currentPassword')}</label>
+                      <input
+                        type="password"
+                        value={currentPwd}
+                        onChange={e => setCurrentPwd(e.target.value)}
+                        className="glass-input-base w-full px-4 py-2.5 rounded-xl"
+                        placeholder={t('currentPasswordPlaceholder')}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--glass-text-secondary)] mb-1.5">{t('newPassword')}</label>
+                      <input
+                        type="password"
+                        value={newPwd}
+                        onChange={e => setNewPwd(e.target.value)}
+                        className="glass-input-base w-full px-4 py-2.5 rounded-xl"
+                        placeholder={t('newPasswordPlaceholder')}
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-[var(--glass-text-secondary)] mb-1.5">{t('confirmPassword')}</label>
+                      <input
+                        type="password"
+                        value={confirmPwd}
+                        onChange={e => setConfirmPwd(e.target.value)}
+                        className="glass-input-base w-full px-4 py-2.5 rounded-xl"
+                        placeholder={t('confirmPasswordPlaceholder')}
+                      />
+                    </div>
+                    {pwdMsg && (
+                      <p className={`text-sm ${pwdMsg.type === 'success' ? 'text-green-600' : 'text-red-500'}`}>{pwdMsg.text}</p>
+                    )}
+                    <button
+                      onClick={async () => {
+                        setPwdMsg(null)
+                        if (newPwd.length < 6) { setPwdMsg({ type: 'error', text: t('passwordTooShort') }); return }
+                        if (newPwd !== confirmPwd) { setPwdMsg({ type: 'error', text: t('passwordMismatch') }); return }
+                        setPwdChanging(true)
+                        try {
+                          const res = await fetch('/api/user/change-password', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ currentPassword: currentPwd, newPassword: newPwd }),
+                          })
+                          const data = await res.json()
+                          if (data.success) {
+                            setPwdMsg({ type: 'success', text: t('passwordChanged') })
+                            setCurrentPwd(''); setNewPwd(''); setConfirmPwd('')
+                          } else {
+                            setPwdMsg({ type: 'error', text: data.message || data.error?.message || 'Failed' })
+                          }
+                        } catch {
+                          setPwdMsg({ type: 'error', text: 'Network error' })
+                        } finally {
+                          setPwdChanging(false)
+                        }
+                      }}
+                      disabled={pwdChanging || !currentPwd || newPwd.length < 6}
+                      className="glass-btn-base glass-btn-primary px-6 py-2.5 rounded-xl text-sm disabled:opacity-50"
+                    >
+                      {pwdChanging ? tc('loading') : t('confirmChange')}
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <>
                   {/* 扣费记录标题栏 */}

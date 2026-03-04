@@ -22,6 +22,10 @@ export default function AdminUsers() {
   const [page, setPage] = useState(1)
   const [search, setSearch] = useState('')
   const [loading, setLoading] = useState(true)
+  const [resetTarget, setResetTarget] = useState<UserItem | null>(null)
+  const [resetPassword, setResetPassword] = useState('')
+  const [resetting, setResetting] = useState(false)
+  const [resetMsg, setResetMsg] = useState('')
 
   const pageSize = 20
   const totalPages = Math.ceil(total / pageSize)
@@ -49,6 +53,30 @@ export default function AdminUsers() {
     })
     const data = await res.json()
     if (data.success) fetchUsers()
+  }
+
+  const handleResetPassword = async () => {
+    if (!resetTarget || !resetPassword || resetPassword.length < 6) return
+    setResetting(true)
+    setResetMsg('')
+    try {
+      const res = await fetch('/api/admin/users/reset-password', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: resetTarget.id, newPassword: resetPassword }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setResetMsg(t('users.resetSuccess'))
+        setTimeout(() => { setResetTarget(null); setResetPassword(''); setResetMsg('') }, 1500)
+      } else {
+        setResetMsg(data.message || data.error?.message || 'Failed')
+      }
+    } catch {
+      setResetMsg('Network error')
+    } finally {
+      setResetting(false)
+    }
   }
 
   return (
@@ -128,6 +156,12 @@ export default function AdminUsers() {
                         </button>
                       )}
                       <button
+                        onClick={() => { setResetTarget(u); setResetPassword(''); setResetMsg('') }}
+                        className="glass-btn-base glass-btn-ghost px-3 py-1.5 text-xs rounded-lg"
+                      >
+                        {t('users.resetPassword')}
+                      </button>
+                      <button
                         onClick={() => updateUser(u.id, { disabled: !u.disabled })}
                         className={`glass-btn-base px-3 py-1.5 text-xs rounded-lg ${u.disabled ? 'glass-btn-soft' : 'glass-btn-danger'}`}
                       >
@@ -164,6 +198,43 @@ export default function AdminUsers() {
           </div>
         )}
       </div>
+
+      {/* Reset Password Modal */}
+      {resetTarget && (
+        <div className="fixed inset-0 glass-overlay flex items-center justify-center z-50" onClick={() => !resetting && setResetTarget(null)}>
+          <div className="glass-surface-modal p-6 max-w-sm w-full mx-4" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-[var(--glass-text-primary)] mb-1">{t('users.resetPassword')}</h3>
+            <p className="text-sm text-[var(--glass-text-secondary)] mb-4">{t('users.resetPasswordFor', { name: resetTarget.name })}</p>
+            <input
+              type="text"
+              value={resetPassword}
+              onChange={e => setResetPassword(e.target.value)}
+              placeholder={t('users.newPasswordPlaceholder')}
+              className="glass-input-base w-full px-4 py-2.5 rounded-xl mb-4"
+              autoFocus
+            />
+            {resetMsg && (
+              <p className={`text-sm mb-3 ${resetMsg === t('users.resetSuccess') ? 'text-green-600' : 'text-red-500'}`}>{resetMsg}</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setResetTarget(null)}
+                disabled={resetting}
+                className="glass-btn-base glass-btn-secondary px-4 py-2 rounded-lg text-sm"
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                onClick={handleResetPassword}
+                disabled={resetting || resetPassword.length < 6}
+                className="glass-btn-base glass-btn-primary px-4 py-2 rounded-lg text-sm disabled:opacity-50"
+              >
+                {resetting ? t('common.loading') : t('users.confirmReset')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
