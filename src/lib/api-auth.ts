@@ -253,8 +253,8 @@ export async function requireProjectAuth<T extends ProjectAuthIncludes = Project
         return notFound('Project')
     }
 
-    // 5. 所有权验证
-    if (project.userId !== session.user.id) {
+    // 5. 所有权验证（管理员跳过）
+    if (project.userId !== session.user.id && session.user.role !== 'ADMIN') {
         return forbidden()
     }
 
@@ -350,7 +350,7 @@ export async function requireProjectAuthLight(
         return notFound('Project')
     }
 
-    if (project.userId !== session.user.id) {
+    if (project.userId !== session.user.id && session.user.role !== 'ADMIN') {
         return forbidden()
     }
 
