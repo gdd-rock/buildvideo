@@ -135,6 +135,20 @@ export function useCharacterCreationSubmit({
         finalDescription = result?.description || finalDescription
       }
 
+      // 子形象模式：添加到现有角色
+      if (isSubAppearance && mode === 'project' && selectedCharacterId.trim()) {
+        await createProjectAppearance.mutateAsync({
+          characterId: selectedCharacterId,
+          changeReason: changeReason.trim() || name.trim(),
+          description: finalDescription || t('character.defaultDescription', { name: name.trim() }),
+          referenceImageUrls,
+          artStyle,
+        })
+        onSuccess()
+        onClose()
+        return
+      }
+
       if (mode === 'asset-hub') {
         await createAssetHubCharacter.mutateAsync({
           name: name.trim(),
@@ -167,19 +181,23 @@ export function useCharacterCreationSubmit({
     }
   }, [
     artStyle,
+    changeReason,
     createAssetHubCharacter,
+    createProjectAppearance,
     createProjectCharacter,
     description,
     directReferenceUrls,
     extractAssetHubDescription,
     extractProjectDescription,
     folderId,
+    isSubAppearance,
     mode,
     name,
     onClose,
     onSuccess,
     referenceImagesBase64.length,
     referenceSubMode,
+    selectedCharacterId,
     t,
     uploadReferenceImages,
   ])

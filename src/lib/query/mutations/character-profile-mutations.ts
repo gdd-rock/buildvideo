@@ -176,6 +176,8 @@ export function useCreateProjectCharacterAppearance(projectId: string) {
             characterId: string
             changeReason: string
             description: string
+            referenceImageUrls?: string[]
+            artStyle?: string
         }) =>
             await requestJsonWithError(
                 `/api/novel-promotion/${projectId}/character/appearance`,

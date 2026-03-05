@@ -1,4 +1,4 @@
-import { logInfo as _ulogInfo, logWarn as _ulogWarn } from '@/lib/logging/core'
+import { logInfo as _ulogInfo, logWarn as _ulogWarn, logError as _ulogError } from '@/lib/logging/core'
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { deleteCOSObject } from '@/lib/cos'
@@ -6,6 +6,7 @@ import { decodeImageUrlsFromDb, encodeImageUrls } from '@/lib/contracts/image-ur
 import { resolveStorageKeyFromMediaValue } from '@/lib/media/service'
 import { requireProjectAuthLight, isErrorResponse } from '@/lib/api-auth'
 import { apiHandler, ApiError } from '@/lib/api-errors'
+import { resolveTaskLocale } from '@/lib/task/resolve-locale'
 
 /**
  * POST - 为现有角色添加子形象
@@ -22,7 +23,7 @@ export const POST = apiHandler(async (
   if (isErrorResponse(authResult)) return authResult
 
   const body = await request.json()
-  const { characterId, changeReason, description } = body
+  const { characterId, changeReason, description, referenceImageUrls, artStyle } = body
 
   if (!characterId || !changeReason || !description) {
     throw new ApiError('INVALID_PARAMS')
@@ -66,6 +67,34 @@ export const POST = apiHandler(async (
   })
 
   _ulogInfo(`✓ 添加子形象: ${character.name} - ${changeReason} (index: ${newIndex})`)
+
+  // 如果有参考图，触发 reference-to-character 后台任务
+  const allReferenceImages = Array.isArray(referenceImageUrls) ? referenceImageUrls.slice(0, 5) : []
+  if (allReferenceImages.length > 0) {
+    const taskLocale = resolveTaskLocale(request, body)
+    const acceptLanguage = request.headers.get('accept-language') || ''
+    const { getBaseUrl } = await import('@/lib/env')
+    const baseUrl = getBaseUrl()
+    fetch(`${baseUrl}/api/novel-promotion/${projectId}/reference-to-character`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Cookie': request.headers.get('cookie') || '',
+        ...(acceptLanguage ? { 'Accept-Language': acceptLanguage } : {}),
+      },
+      body: JSON.stringify({
+        referenceImageUrls: allReferenceImages,
+        characterName: character.name,
+        characterId: character.id,
+        appearanceId: newAppearance.id,
+        isBackgroundJob: true,
+        artStyle: artStyle || 'american-comic',
+        locale: taskLocale || undefined,
+      }),
+    }).catch(err => {
+      _ulogError('[Appearance API] 参考图后台生成任务触发失败:', err)
+    })
+  }
 
   return NextResponse.json({
     success: true,
