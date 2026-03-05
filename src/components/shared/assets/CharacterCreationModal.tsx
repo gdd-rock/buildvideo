@@ -35,6 +35,7 @@ export function CharacterCreationModal({
   const [aiInstruction, setAiInstruction] = useState('')
   const [artStyle, setArtStyle] = useState('american-comic')
   const [referenceImagesBase64, setReferenceImagesBase64] = useState<string[]>([])
+  const [directReferenceUrls, setDirectReferenceUrls] = useState<string[]>([])
   const [referenceSubMode, setReferenceSubMode] = useState<'direct' | 'extract'>('direct')
   const [isSubAppearance, setIsSubAppearance] = useState(false)
   const [selectedCharacterId, setSelectedCharacterId] = useState('')
@@ -70,6 +71,7 @@ export function CharacterCreationModal({
     aiInstruction,
     artStyle,
     referenceImagesBase64,
+    directReferenceUrls,
     referenceSubMode,
     isSubAppearance,
     selectedCharacterId,
@@ -190,6 +192,8 @@ export function CharacterCreationModal({
             setArtStyle={(value) => setArtStyle(value)}
             referenceImagesBase64={referenceImagesBase64}
             setReferenceImagesBase64={(images) => setReferenceImagesBase64(images)}
+            directReferenceUrls={directReferenceUrls}
+            setDirectReferenceUrls={(urls) => setDirectReferenceUrls(urls)}
             referenceSubMode={referenceSubMode}
             setReferenceSubMode={(value) => setReferenceSubMode(value)}
             isSubAppearance={isSubAppearance}

@@ -26,6 +26,7 @@ interface UseCharacterCreationSubmitParams {
   aiInstruction: string
   artStyle: string
   referenceImagesBase64: string[]
+  directReferenceUrls: string[]
   referenceSubMode: 'direct' | 'extract'
   isSubAppearance: boolean
   selectedCharacterId: string
@@ -50,6 +51,7 @@ export function useCharacterCreationSubmit({
   aiInstruction,
   artStyle,
   referenceImagesBase64,
+  directReferenceUrls,
   referenceSubMode,
   isSubAppearance,
   selectedCharacterId,
@@ -115,11 +117,15 @@ export function useCharacterCreationSubmit({
   ])
 
   const handleCreateWithReference = useCallback(async () => {
-    if (!name.trim() || referenceImagesBase64.length === 0) return
+    const hasImages = referenceImagesBase64.length > 0 || directReferenceUrls.length > 0
+    if (!name.trim() || !hasImages) return
 
     try {
       setIsSubmitting(true)
-      const referenceImageUrls = await uploadReferenceImages()
+      // 数字人流程：直接使用已有 COS URL，无需重新上传
+      const referenceImageUrls = directReferenceUrls.length > 0
+        ? directReferenceUrls
+        : await uploadReferenceImages()
 
       let finalDescription = description.trim()
       if (referenceSubMode === 'extract') {
@@ -164,6 +170,7 @@ export function useCharacterCreationSubmit({
     createAssetHubCharacter,
     createProjectCharacter,
     description,
+    directReferenceUrls,
     extractAssetHubDescription,
     extractProjectDescription,
     folderId,

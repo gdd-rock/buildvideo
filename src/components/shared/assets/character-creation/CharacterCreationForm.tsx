@@ -38,6 +38,8 @@ interface CharacterCreationFormProps {
   setArtStyle: (value: string) => void
   referenceImagesBase64: string[]
   setReferenceImagesBase64: (images: string[]) => void
+  directReferenceUrls: string[]
+  setDirectReferenceUrls: (urls: string[]) => void
   referenceSubMode: 'direct' | 'extract'
   setReferenceSubMode: (mode: 'direct' | 'extract') => void
   isSubAppearance: boolean
@@ -82,6 +84,8 @@ export default function CharacterCreationForm({
   setArtStyle,
   referenceImagesBase64,
   setReferenceImagesBase64,
+  directReferenceUrls,
+  setDirectReferenceUrls,
   referenceSubMode,
   setReferenceSubMode,
   isSubAppearance,
@@ -107,7 +111,6 @@ export default function CharacterCreationForm({
 
   // 数字人选择相关
   const [selectedDHId, setSelectedDHId] = useState<string | null>(null)
-  const [loadingDHImages, setLoadingDHImages] = useState(false)
 
   const { data: dhData } = useQuery<{ digitalHumans: DigitalHumanOption[] }>({
     queryKey: ['digital-humans-for-picker'],
@@ -125,26 +128,20 @@ export default function CharacterCreationForm({
 
   const selectedDH = readyDigitalHumans.find((dh) => dh.id === selectedDHId)
 
-  // 选中数字人后，通过服务端代理获取图片 base64（避免 CORS）
-  const handleSelectDigitalHuman = useCallback(async (dh: DigitalHumanOption) => {
+  // 选中数字人后，直接使用其已有的 COS 签名 URL（无需 base64 转换）
+  const handleSelectDigitalHuman = useCallback((dh: DigitalHumanOption) => {
     setSelectedDHId(dh.id)
     if (!name.trim()) setName(dh.name)
 
-    setLoadingDHImages(true)
-    try {
-      // 优先使用第5张合成参考图（index 4），否则获取全部
-      const indexParam = dh.avatarImageUrls.length >= 5 ? '?index=4' : ''
-      const res = await fetch(`/api/asset-hub/digital-humans/${dh.id}/image-base64${indexParam}`)
-      if (res.ok) {
-        const data = await res.json() as { images: string[] }
-        if (data.images.length > 0) {
-          setReferenceImagesBase64(data.images)
-        }
-      }
-    } finally {
-      setLoadingDHImages(false)
-    }
-  }, [name, setName, setReferenceImagesBase64])
+    // 优先使用第5张合成参考图（index 4），否则使用全部
+    const urls = dh.avatarImageUrls.length >= 5
+      ? [dh.avatarImageUrls[4]]
+      : dh.avatarImageUrls.length > 0
+        ? dh.avatarImageUrls
+        : (dh.avatarImageUrl ? [dh.avatarImageUrl] : [])
+
+    setDirectReferenceUrls(urls)
+  }, [name, setName, setDirectReferenceUrls])
 
   return (
     <div className="space-y-5">
@@ -432,8 +429,8 @@ export default function CharacterCreationForm({
               {readyDigitalHumans.map((dh) => (
                 <button
                   key={dh.id}
-                  onClick={() => void handleSelectDigitalHuman(dh)}
-                  disabled={loadingDHImages}
+                  onClick={() => handleSelectDigitalHuman(dh)}
+                  disabled={false}
                   className={`relative rounded-lg overflow-hidden border-2 transition-all cursor-pointer ${
                     selectedDHId === dh.id
                       ? 'border-[var(--glass-tone-info-fg)] ring-1 ring-[var(--glass-tone-info-fg)]'
@@ -457,13 +454,13 @@ export default function CharacterCreationForm({
             <div className="text-xs text-[var(--glass-text-secondary)] flex items-center gap-1">
               <AppIcon name="check" className="w-3 h-3 text-[var(--glass-tone-success-fg)]" />
               {t('character.selectedDH')}: {selectedDH.name}
-              {loadingDHImages && <span className="ml-1 animate-pulse">...</span>}
+              {directReferenceUrls.length > 0 && <AppIcon name="check" className="w-3 h-3 text-[var(--glass-tone-success-fg)]" />}
             </div>
           )}
 
           <button
             onClick={handleCreateWithReference}
-            disabled={isSubmitting || !name.trim() || referenceImagesBase64.length === 0 || loadingDHImages}
+            disabled={isSubmitting || !name.trim() || directReferenceUrls.length === 0}
             className="glass-btn-base glass-btn-primary w-full px-4 py-2.5 rounded-lg disabled:opacity-40 disabled:cursor-not-allowed text-sm"
           >
             {isSubmitting ? t('common.creating') : t('character.convertToSheet')}
