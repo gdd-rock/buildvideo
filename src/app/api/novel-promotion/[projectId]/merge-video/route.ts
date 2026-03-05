@@ -62,8 +62,8 @@ export const POST = apiHandler(async (
   })
 
   return NextResponse.json({
-    taskId: result.task.id,
-    status: result.task.status,
+    taskId: result.taskId,
+    status: result.status,
   })
 })
 

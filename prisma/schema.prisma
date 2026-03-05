@@ -424,8 +424,24 @@ model User {
   taskEvents         TaskEvent[]
   graphRuns          GraphRun[]
   graphEvents        GraphEvent[]
+  apiKeys            ApiKey[]
 
   @@map("user")
+}
+
+model ApiKey {
+  id         String    @id @default(uuid())
+  userId     String
+  name       String    @default("Default")
+  keyHash    String    @unique
+  keyPrefix  String
+  lastUsedAt DateTime?
+  expiresAt  DateTime?
+  createdAt  DateTime  @default(now())
+  user       User      @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("api_key")
 }
 
 model UserPreference {
