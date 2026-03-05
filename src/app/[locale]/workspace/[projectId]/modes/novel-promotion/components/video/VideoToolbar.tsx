@@ -4,6 +4,8 @@ import TaskStatusInline from '@/components/task/TaskStatusInline'
 import { resolveTaskPresentationState } from '@/lib/task/presentation'
 import { AppIcon } from '@/components/ui/icons'
 
+type MergeStatus = 'idle' | 'merging' | 'done' | 'error'
+
 interface VideoToolbarProps {
   totalPanels: number
   runningCount: number
@@ -16,6 +18,11 @@ interface VideoToolbarProps {
   onBack: () => void
   onEnterEditor?: () => void  // 进入剪辑器
   videosReady?: boolean  // 是否有视频可以剪辑
+  // 一键合成
+  mergeStatus?: MergeStatus
+  mergeProgress?: number
+  onMerge?: () => void
+  onDownloadMerged?: () => void
 }
 
 export default function VideoToolbar({
@@ -29,7 +36,11 @@ export default function VideoToolbar({
   onDownloadAll,
   onBack,
   onEnterEditor,
-  videosReady = false
+  videosReady = false,
+  mergeStatus = 'idle',
+  mergeProgress = 0,
+  onMerge,
+  onDownloadMerged,
 }: VideoToolbarProps) {
   const t = useTranslations('video')
   const videoTaskRunningState = isAnyTaskRunning
@@ -98,6 +109,27 @@ export default function VideoToolbar({
               </>
             )}
           </button>
+          {onMerge && (
+            <button
+              onClick={mergeStatus === 'done' ? onDownloadMerged : onMerge}
+              disabled={videosWithUrl === 0 || mergeStatus === 'merging'}
+              className={`glass-btn-base flex items-center gap-2 px-4 py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed ${
+                mergeStatus === 'done'
+                  ? 'glass-btn-tone-success'
+                  : 'glass-btn-tone-info'
+              }`}
+              title={mergeStatus === 'done' ? t('toolbar.downloadMerged') : t('toolbar.mergeVideo')}
+            >
+              <AppIcon name={mergeStatus === 'done' ? 'image' : 'play'} className="w-4 h-4" />
+              <span>
+                {mergeStatus === 'merging'
+                  ? `${t('toolbar.merging')} ${mergeProgress}%`
+                  : mergeStatus === 'done'
+                    ? t('toolbar.downloadMerged')
+                    : t('toolbar.mergeVideo')}
+              </span>
+            </button>
+          )}
           {onEnterEditor && (
             <button
               onClick={onEnterEditor}

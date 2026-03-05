@@ -91,7 +91,10 @@
     "downloadAll": "Download All",
     "enterEditor": "Enter Video Editor",
     "enterEdit": "Enter Editor",
-    "back": "Back"
+    "back": "Back",
+    "mergeVideo": "Merge Video",
+    "merging": "Merging",
+    "downloadMerged": "Download Merged"
   },
   "stage": {
     "title": "Video Generation",

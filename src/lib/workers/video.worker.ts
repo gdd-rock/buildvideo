@@ -4,6 +4,7 @@ import { queueRedis } from '@/lib/redis'
 import { QUEUE_NAME } from '@/lib/task/queues'
 import { TASK_TYPE, type TaskJobData } from '@/lib/task/types'
 import { reportTaskProgress, withTaskLifecycle } from './shared'
+import { handleVideoMergeTask } from './handlers/video-merge'
 import {
   assertTaskActive,
   getProjectModels,
@@ -282,6 +283,8 @@ async function processVideoTask(job: Job<TaskJobData>) {
       return await handleVideoPanelTask(job)
     case TASK_TYPE.LIP_SYNC:
       return await handleLipSyncTask(job)
+    case TASK_TYPE.VIDEO_MERGE:
+      return await handleVideoMergeTask(job)
     default:
       throw new Error(`Unsupported video task type: ${job.data.type}`)
   }

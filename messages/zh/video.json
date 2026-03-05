@@ -91,7 +91,10 @@
     "downloadAll": "下载全部",
     "enterEditor": "进入视频剪辑器",
     "enterEdit": "进入剪辑",
-    "back": "返回"
+    "back": "返回",
+    "mergeVideo": "一键合成",
+    "merging": "合成中",
+    "downloadMerged": "下载成片"
   },
   "stage": {
     "title": "视频生成",
@@ -112,6 +115,7 @@
       "fetchVideosFailed": "获取视频列表失败"
     },
     "downloadFailed": "下载失败",
+    "mergeFailed": "合成失败",
     "unknownError": "未知错误"
   },
   "firstLastFrame": {
