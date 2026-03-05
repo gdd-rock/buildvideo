@@ -14,7 +14,7 @@ import type { TaskJobData } from '@/lib/task/types'
  * 下载所有镜头视频 → FFmpeg 拼接 → 上传 COS → 返回下载链接
  */
 export async function handleVideoMergeTask(job: Job<TaskJobData>) {
-  const { episodeId, projectId, payload } = job.data
+  const { episodeId, payload } = job.data
   const transition = (payload?.transition as 'none' | 'fade') || 'none'
   const panelPreferences = (payload?.panelPreferences as Record<string, boolean>) || {}
 

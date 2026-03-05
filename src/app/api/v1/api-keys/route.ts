@@ -3,15 +3,12 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getAuthSession } from '@/lib/api-auth'
 import { generateApiKey } from '@/lib/api-v1/auth'
-import { apiV1Handler, v1Success, ApiV1Error } from '@/lib/api-v1/handler'
+import { apiV1Handler, v1Success } from '@/lib/api-v1/handler'
 
 /**
  * POST /api/v1/api-keys — 创建 API Key（支持 session 或 API Key 认证）
  */
 export async function POST(request: NextRequest) {
-  // 支持两种认证方式：session 或 API Key
-  let userId: string
-
   const authHeader = request.headers.get('authorization')
   if (authHeader?.startsWith('Bearer wao_')) {
     // API Key 认证
@@ -37,7 +34,7 @@ export async function POST(request: NextRequest) {
       { status: 401 },
     )
   }
-  userId = session.user.id
+  const userId = session.user.id
 
   const body = await request.json().catch(() => ({}))
   const name = (body.name as string) || 'Default'
