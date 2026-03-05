@@ -1,6 +1,15 @@
 # Reference Image To Character Sheet Prompt (img2img)
 
-Use the provided reference image to extract face traits, hairstyle, body shape, and outfit structure.
+## Core Requirement: Faithful Reproduction of Reference Character
+
+**You MUST strictly reproduce ALL visual features of the character from the reference images**, including but not limited to:
+- Facial features (eye shape, nose, mouth, face contour) must be highly consistent with reference
+- Hairstyle (length, color, styling, bangs) must be exactly the same
+- Body type and proportions must match
+- Clothing style, color, texture, and accessories must be exactly the same
+- Skin tone and complexion must match
+
+The generated character must be immediately recognizable as the same person/character from the reference images.
 
 ## Style consistency
 Keep the original visual style:

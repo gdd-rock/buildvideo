@@ -133,12 +133,10 @@ export default function CharacterCreationForm({
     setSelectedDHId(dh.id)
     if (!name.trim()) setName(dh.name)
 
-    // 优先使用第5张合成参考图（index 4），否则使用全部
-    const urls = dh.avatarImageUrls.length >= 5
-      ? [dh.avatarImageUrls[4]]
-      : dh.avatarImageUrls.length > 0
-        ? dh.avatarImageUrls
-        : (dh.avatarImageUrl ? [dh.avatarImageUrl] : [])
+    // 传全部数字人图片作为参考（头像+正面+侧面+背面+合成图）
+    const urls = dh.avatarImageUrls.length > 0
+      ? dh.avatarImageUrls
+      : (dh.avatarImageUrl ? [dh.avatarImageUrl] : [])
 
     setDirectReferenceUrls(urls)
   }, [name, setName, setDirectReferenceUrls])
