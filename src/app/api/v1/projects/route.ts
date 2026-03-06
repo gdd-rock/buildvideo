@@ -25,7 +25,6 @@ export const POST = apiV1Handler(async (request, ctx) => {
   const npProject = await prisma.novelPromotionProject.create({
     data: {
       projectId: project.id,
-      status: 'draft',
     },
   })
 
@@ -46,7 +45,7 @@ export const GET = apiV1Handler(async (_request, ctx) => {
     where: { userId: ctx.userId },
     include: {
       novelPromotionData: {
-        select: { id: true, status: true },
+        select: { id: true, workflowMode: true },
       },
     },
     orderBy: { updatedAt: 'desc' },
@@ -57,7 +56,7 @@ export const GET = apiV1Handler(async (_request, ctx) => {
       id: p.id,
       name: p.name,
       description: p.description,
-      status: p.novelPromotionData?.status || null,
+      workflowMode: p.novelPromotionData?.workflowMode || null,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,
     })),
