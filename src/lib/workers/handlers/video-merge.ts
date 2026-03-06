@@ -16,6 +16,7 @@ import {
   type KenBurnsEffect,
   type TitleCard,
 } from '@/lib/video/ffmpeg-concat'
+import { generateEditingMarkup, type PanelMeta } from '@/lib/video/editing-director'
 import type { TaskJobData } from '@/lib/task/types'
 
 /**
@@ -33,6 +34,7 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
   const enableTitleCards = payload?.titleCards === true // 默认关闭
   const introFade = typeof payload?.introFade === 'number' ? payload.introFade : 1.0
   const outroFade = typeof payload?.outroFade === 'number' ? payload.outroFade : 1.5
+  const enableAiDirector = payload?.aiDirector === true // 默认关闭，需显式开启
 
   if (!episodeId) {
     throw new Error('episodeId is required for video merge')
@@ -57,6 +59,9 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
               panelIndex: true,
               shotType: true,
               cameraMove: true,
+              description: true,
+              location: true,
+              characters: true,
               linkedToNextPanel: true,
               lipSyncVideoUrl: true,
               videoUrl: true,
@@ -94,6 +99,9 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
     panelId: string
     shotType: string | null
     cameraMove: string | null
+    description: string | null
+    location: string | null
+    characters: string | null
     linkedToNextPanel: boolean
     subtitle: string | null
     speaker: string | null
@@ -127,11 +135,14 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
           panelId: panel.id,
           shotType: panel.shotType,
           cameraMove: panel.cameraMove,
+          description: panel.description,
+          location: panel.location,
+          characters: panel.characters,
           linkedToNextPanel: panel.linkedToNextPanel,
           subtitle: voice?.content || panel.srtSegment || null,
           speaker: voice?.speaker || null,
           voiceAudioUrl: voice?.audioUrl || null,
-          voiceAudioDuration: voice?.audioDuration ? voice.audioDuration / 1000 : null, // ms → sec
+          voiceAudioDuration: voice?.audioDuration ? voice.audioDuration / 1000 : null,
           clipSummary: clip?.summary || undefined,
           clipIndex: clipIndex >= 0 ? clipIndex : 0,
         })
@@ -284,36 +295,102 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
       logInfo(`[video-merge] 生成 ${subtitleEntries.length} 条字幕`)
     }
 
-    // 构建转场元数据
-    const panelTransitions: PanelTransitionInfo[] = videos.map(v => ({
-      shotType: v.shotType,
-      linkedToNextPanel: v.linkedToNextPanel,
-    }))
-
-    // 构建 Ken Burns 效果
+    // ==================== AI 剪辑决策 / 规则回退 ====================
     let kenBurnsEffects: KenBurnsEffect[] | undefined
-    if (enableKenBurns) {
-      kenBurnsEffects = videos.map(v => resolveKenBurns(v.cameraMove))
-      const kbCount = kenBurnsEffects.filter(e => e.type !== 'none').length
-      logInfo(`[video-merge] Ken Burns 运镜: ${kbCount}/${videos.length} 个片段`)
-    }
-
-    // 构建标题卡（按 clip 边界插入）
     let titleCards: TitleCard[] | undefined
-    if (enableTitleCards) {
-      titleCards = []
-      let lastClipIndex = -1
-      for (let i = 0; i < videos.length; i++) {
-        const ci = videos[i].clipIndex ?? 0
-        if (ci !== lastClipIndex && videos[i].clipSummary) {
-          titleCards.push({
-            text: videos[i].clipSummary!,
-            insertBefore: i,
-          })
-          lastClipIndex = ci
+    let panelTransitions: PanelTransitionInfo[]
+    let finalIntroFade = introFade
+    let finalOutroFade = outroFade
+    let finalTransition = transition
+
+    if (enableAiDirector) {
+      // LLM 驱动剪辑决策
+      await reportTaskProgress(job, 54, {
+        stage: 'video_merge_ai_director',
+        stageLabel: 'AI 分析剪辑策略',
+        displayMode: 'detail',
+      })
+
+      const panelMetas: PanelMeta[] = videos.map((v, i) => ({
+        index: i,
+        shotType: v.shotType,
+        cameraMove: v.cameraMove,
+        description: v.description,
+        location: v.location,
+        characters: v.characters,
+        linkedToNextPanel: v.linkedToNextPanel,
+        hasVoice: !!v.voiceAudioUrl,
+        voiceText: v.subtitle,
+        clipIndex: v.clipIndex ?? 0,
+        clipSummary: v.clipSummary || null,
+      }))
+
+      const markup = await generateEditingMarkup(panelMetas, job.data.userId, job.data.projectId || '')
+
+      // 应用 AI 决策到各个维度
+      kenBurnsEffects = markup.panels.map(p => ({
+        type: p.kenBurns,
+        intensity: p.kenBurnsIntensity,
+      }))
+
+      panelTransitions = markup.panels.map(p => ({
+        shotType: null,
+        linkedToNextPanel: false,
+        // 转场信息通过 smart transition 中的 override 传递
+        _transitionOverride: p.transitionToNext,
+        _transitionDuration: p.transitionDuration,
+      })) as PanelTransitionInfo[]
+
+      // 标题卡
+      if (markup.titleCardPositions.length > 0) {
+        titleCards = markup.titleCardPositions.map(pos => ({
+          text: videos[pos]?.clipSummary || `第 ${(videos[pos]?.clipIndex ?? 0) + 1} 章`,
+          insertBefore: pos,
+        }))
+      }
+
+      // 覆盖 clipSync 的 maxSilentDuration
+      if (clipSync) {
+        for (let i = 0; i < clipSync.length && i < markup.panels.length; i++) {
+          if (!clipSync[i].voiceAudioFile) {
+            clipSync[i].maxSilentDuration = markup.panels[i].maxSilentDuration
+          }
         }
       }
-      logInfo(`[video-merge] 标题卡: ${titleCards.length} 个`)
+
+      finalIntroFade = markup.introFade
+      finalOutroFade = markup.outroFade
+      finalTransition = 'smart' // AI 决策下使用 smart 模式
+
+      logInfo(`[video-merge] AI 剪辑决策: pacing=${markup.pacing}, 标题卡=${titleCards?.length || 0}个`)
+    } else {
+      // 规则引擎回退
+      panelTransitions = videos.map(v => ({
+        shotType: v.shotType,
+        linkedToNextPanel: v.linkedToNextPanel,
+      }))
+
+      if (enableKenBurns) {
+        kenBurnsEffects = videos.map(v => resolveKenBurns(v.cameraMove))
+        const kbCount = kenBurnsEffects.filter(e => e.type !== 'none').length
+        logInfo(`[video-merge] Ken Burns 运镜: ${kbCount}/${videos.length} 个片段`)
+      }
+
+      if (enableTitleCards) {
+        titleCards = []
+        let lastClipIndex = -1
+        for (let i = 0; i < videos.length; i++) {
+          const ci = videos[i].clipIndex ?? 0
+          if (ci !== lastClipIndex && videos[i].clipSummary) {
+            titleCards.push({
+              text: videos[i].clipSummary!,
+              insertBefore: i,
+            })
+            lastClipIndex = ci
+          }
+        }
+        logInfo(`[video-merge] 标题卡: ${titleCards.length} 个`)
+      }
     }
 
     // FFmpeg 拼接 + 后处理
@@ -327,7 +404,7 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
     await concatVideosWithFFmpeg({
       inputFiles: localFiles,
       outputFile: outputPath,
-      transition,
+      transition: finalTransition,
       transitionDuration: 0.5,
       subtitles: subtitleEntries,
       bgmFile: bgmLocalPath,
@@ -336,8 +413,8 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
       clipSync,
       kenBurnsEffects,
       titleCards,
-      introFadeDuration: introFade,
-      outroFadeDuration: outroFade,
+      introFadeDuration: finalIntroFade,
+      outroFadeDuration: finalOutroFade,
     })
 
     logInfo(`[video-merge] FFmpeg 合成完成`)

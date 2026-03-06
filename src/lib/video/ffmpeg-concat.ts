@@ -107,17 +107,33 @@ function escapeASS(text: string): string {
 export interface PanelTransitionInfo {
   shotType?: string | null
   linkedToNextPanel?: boolean
+  /** AI 剪辑决策覆盖：指定转场类型 */
+  _transitionOverride?: string
+  /** AI 剪辑决策覆盖：指定转场时长 */
+  _transitionDuration?: number
 }
 
 type XfadeTransition = 'fade' | 'wipeleft' | 'wiperight' | 'wipeup' | 'slideright' | 'slideleft' | 'dissolve'
 
+const VALID_XFADE: Set<string> = new Set(['fade', 'wipeleft', 'wiperight', 'wipeup', 'slideright', 'slideleft', 'dissolve', 'none'])
+
 /**
- * 根据面板元数据自动选择转场效果
+ * 根据面板元数据自动选择转场效果（支持 AI 决策覆盖）
  */
 function resolveSmartTransition(
   current: PanelTransitionInfo | undefined,
   next: PanelTransitionInfo | undefined,
 ): { transition: XfadeTransition; duration: number } {
+  // AI 决策覆盖
+  if (current?._transitionOverride && VALID_XFADE.has(current._transitionOverride)) {
+    const override = current._transitionOverride
+    if (override === 'none') return { transition: 'fade', duration: 0 }
+    return {
+      transition: override as XfadeTransition,
+      duration: current._transitionDuration ?? 0.5,
+    }
+  }
+
   // linkedToNextPanel=true → 溶解（连续镜头）
   if (current?.linkedToNextPanel) {
     return { transition: 'dissolve', duration: 0.3 }
