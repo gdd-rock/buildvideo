@@ -11,6 +11,7 @@ import {
   getVideoDuration,
   type SubtitleEntry,
   type PanelTransitionInfo,
+  type ClipSyncInfo,
 } from '@/lib/video/ffmpeg-concat'
 import type { TaskJobData } from '@/lib/task/types'
 
@@ -62,7 +63,7 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
       voiceLines: {
         where: { audioUrl: { not: null }, matchedPanelId: { not: null } },
         orderBy: { lineIndex: 'asc' },
-        select: { content: true, speaker: true, matchedPanelId: true },
+        select: { content: true, speaker: true, matchedPanelId: true, audioUrl: true, audioDuration: true },
       },
     },
   })
@@ -72,10 +73,10 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
   }
 
   // 构建面板 → 配音映射
-  const voiceByPanel = new Map<string, { content: string; speaker: string }>()
+  const voiceByPanel = new Map<string, { content: string; speaker: string; audioUrl: string | null; audioDuration: number | null }>()
   for (const vl of episode.voiceLines) {
     if (vl.matchedPanelId) {
-      voiceByPanel.set(vl.matchedPanelId, { content: vl.content, speaker: vl.speaker })
+      voiceByPanel.set(vl.matchedPanelId, { content: vl.content, speaker: vl.speaker, audioUrl: vl.audioUrl, audioDuration: vl.audioDuration })
     }
   }
 
@@ -87,6 +88,8 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
     linkedToNextPanel: boolean
     subtitle: string | null
     speaker: string | null
+    voiceAudioUrl: string | null
+    voiceAudioDuration: number | null
   }
 
   const allClips = episode.clips || []
@@ -114,6 +117,8 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
           linkedToNextPanel: panel.linkedToNextPanel,
           subtitle: voice?.content || panel.srtSegment || null,
           speaker: voice?.speaker || null,
+          voiceAudioUrl: voice?.audioUrl || null,
+          voiceAudioDuration: voice?.audioDuration ? voice.audioDuration / 1000 : null, // ms → sec
         })
       }
     }
@@ -199,6 +204,47 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
       }
     }
 
+    // 下载配音音频 + 构建 clipSync
+    const enableSync = payload?.audioSync !== false // 默认开启
+    let clipSync: ClipSyncInfo[] | undefined
+    if (enableSync) {
+      await reportTaskProgress(job, 53, {
+        stage: 'video_merge_sync',
+        stageLabel: '下载配音音频',
+        displayMode: 'detail',
+      })
+
+      clipSync = []
+      for (let i = 0; i < videos.length; i++) {
+        const video = videos[i]
+        if (video.voiceAudioUrl && video.voiceAudioDuration) {
+          try {
+            let audioFetchUrl = video.voiceAudioUrl
+            if (!audioFetchUrl.startsWith('http')) {
+              audioFetchUrl = toFetchableUrl(getSignedUrl(audioFetchUrl, 3600))
+            }
+            const audioRes = await fetch(audioFetchUrl)
+            if (audioRes.ok) {
+              const audioPath = path.join(tmpDir, `voice_${String(i).padStart(3, '0')}.mp3`)
+              await fs.writeFile(audioPath, Buffer.from(await audioRes.arrayBuffer()))
+              clipSync.push({
+                voiceAudioFile: audioPath,
+                audioDuration: video.voiceAudioDuration,
+              })
+              continue
+            }
+          } catch {
+            logError(`[video-merge] 配音音频下载失败: panel ${video.panelId}`)
+          }
+        }
+        // 无配音：设置最大静音时长（压缩过长片段）
+        clipSync.push({ maxSilentDuration: 4.0 })
+      }
+
+      const syncCount = clipSync.filter(s => s.voiceAudioFile).length
+      logInfo(`[video-merge] 音画同步: ${syncCount}/${videos.length} 个片段有配音`)
+    }
+
     // 构建字幕信息
     let subtitleEntries: SubtitleEntry[] | undefined
     if (enableSubtitles) {
@@ -246,6 +292,7 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
       bgmFile: bgmLocalPath,
       bgmVolume,
       panelTransitions,
+      clipSync,
     })
 
     logInfo(`[video-merge] FFmpeg 合成完成`)

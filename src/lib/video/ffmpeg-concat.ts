@@ -143,6 +143,95 @@ function resolveSmartTransition(
   return { transition: 'fade', duration: 0.3 }
 }
 
+// ==================== 音画同步 ====================
+
+export interface ClipSyncInfo {
+  /** 配音音频本地文件路径（用于替换原声） */
+  voiceAudioFile?: string
+  /** 配音音频时长（秒），用于调整视频速度 */
+  audioDuration?: number
+  /** 无配音片段的最大时长（秒），超过则加速 */
+  maxSilentDuration?: number
+}
+
+/**
+ * 对单个片段做音画同步预处理
+ * - 有配音：调整视频速度匹配配音时长 + 替换音轨
+ * - 无配音：如果超过 maxSilentDuration 则加速
+ */
+async function syncClip(
+  inputFile: string,
+  outputFile: string,
+  sync: ClipSyncInfo,
+): Promise<void> {
+  const videoDur = await getVideoDuration(inputFile)
+  if (videoDur <= 0) {
+    await fs.copyFile(inputFile, outputFile)
+    return
+  }
+
+  if (sync.voiceAudioFile && sync.audioDuration && sync.audioDuration > 0) {
+    // 有配音：视频速度调整 + 替换音轨
+    const targetDur = sync.audioDuration
+    const speedRatio = videoDur / targetDur // >1 = 加速, <1 = 减速
+
+    // 限制速度范围 0.5x ~ 2.0x，避免效果太夸张
+    const clampedRatio = Math.max(0.5, Math.min(2.0, speedRatio))
+    const ptsFactor = (1 / clampedRatio).toFixed(4)
+
+    logInfo(`[sync] 视频 ${videoDur.toFixed(1)}s → 配音 ${targetDur.toFixed(1)}s, 速率 ${clampedRatio.toFixed(2)}x`)
+
+    await runFFmpeg([
+      '-i', inputFile,
+      '-i', sync.voiceAudioFile,
+      '-filter_complex',
+      [
+        `[0:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,setpts=${ptsFactor}*PTS,fps=30[v]`,
+        // 配音音频不变速，直接使用
+      ].join(';\n'),
+      '-map', '[v]',
+      '-map', '1:a',       // 使用配音音频替换原声
+      '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
+      '-c:a', 'aac', '-ar', '44100', '-ac', '2',
+      '-shortest',         // 取视频和音频的较短值
+      '-y', outputFile,
+    ])
+    return
+  }
+
+  // 无配音：如果片段过长则加速
+  const maxDur = sync.maxSilentDuration || 4.0
+  if (videoDur > maxDur) {
+    const speedRatio = videoDur / maxDur
+    const ptsFactor = (1 / speedRatio).toFixed(4)
+    const atempo = Math.min(2.0, speedRatio) // atempo 范围 0.5-2.0
+
+    logInfo(`[sync] 无配音片段 ${videoDur.toFixed(1)}s → 压缩至 ${maxDur.toFixed(1)}s`)
+
+    await runFFmpeg([
+      '-i', inputFile,
+      '-filter_complex',
+      `[0:v]scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1,setpts=${ptsFactor}*PTS,fps=30[v];[0:a]atempo=${atempo.toFixed(4)}[a]`,
+      '-map', '[v]',
+      '-map', '[a]',
+      '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
+      '-c:a', 'aac', '-ar', '44100', '-ac', '2',
+      '-y', outputFile,
+    ])
+    return
+  }
+
+  // 无需调整：走标准规范化
+  await runFFmpeg([
+    '-i', inputFile,
+    '-vf', 'scale=1920:1080:force_original_aspect_ratio=decrease,pad=1920:1080:(ow-iw)/2:(oh-ih)/2,setsar=1',
+    '-r', '30',
+    '-c:v', 'libx264', '-preset', 'fast', '-crf', '23',
+    '-c:a', 'aac', '-ar', '44100', '-ac', '2',
+    '-y', outputFile,
+  ])
+}
+
 // ==================== 主入口 ====================
 
 export interface ConcatOptions {
@@ -158,6 +247,8 @@ export interface ConcatOptions {
   bgmVolume?: number
   /** 面板转场元数据（仅 transition='smart' 时使用） */
   panelTransitions?: PanelTransitionInfo[]
+  /** 每个片段的音画同步信息（与 inputFiles 一一对应） */
+  clipSync?: ClipSyncInfo[]
 }
 
 /**
@@ -174,35 +265,62 @@ export async function concatVideosWithFFmpeg(options: ConcatOptions): Promise<vo
     inputFiles, outputFile,
     transition = 'none', transitionDuration = 0.5,
     subtitles, bgmFile, bgmVolume = 0.15,
-    panelTransitions,
+    panelTransitions, clipSync,
   } = options
 
   if (inputFiles.length === 0) {
     throw new Error('No input files provided')
   }
 
-  // 确定是否需要后处理（字幕/BGM）
-  const needsPostProcess = (subtitles && subtitles.length > 0) || bgmFile
+  const dir = path.dirname(outputFile)
 
-  // 拼接输出路径（如需后处理则先输出到临时文件）
-  const concatOutput = needsPostProcess
-    ? outputFile.replace('.mp4', '_concat_tmp.mp4')
-    : outputFile
+  // Step 1: 音画同步预处理（如果提供了 clipSync）
+  let processedFiles = inputFiles
+  const syncTempFiles: string[] = []
 
-  if (inputFiles.length === 1) {
-    await fs.copyFile(inputFiles[0], concatOutput)
-  } else if (transition === 'smart' && panelTransitions) {
-    await concatWithSmartTransitions(inputFiles, concatOutput, panelTransitions)
-  } else if (transition === 'fade') {
-    await concatWithXfade(inputFiles, concatOutput, transitionDuration)
-  } else {
-    await concatWithDemuxer(inputFiles, concatOutput)
+  if (clipSync && clipSync.length > 0) {
+    logInfo(`[FFmpeg] 音画同步预处理: ${clipSync.filter(s => s.voiceAudioFile).length} 个有配音`)
+    processedFiles = []
+    for (let i = 0; i < inputFiles.length; i++) {
+      const sync = clipSync[i]
+      if (sync && (sync.voiceAudioFile || (sync.maxSilentDuration && sync.maxSilentDuration > 0))) {
+        const syncedPath = path.join(dir, `_synced_${i}.mp4`)
+        await syncClip(inputFiles[i], syncedPath, sync)
+        processedFiles.push(syncedPath)
+        syncTempFiles.push(syncedPath)
+      } else {
+        processedFiles.push(inputFiles[i])
+      }
+    }
   }
 
-  // 后处理：字幕烧录 + BGM 混音
-  if (needsPostProcess) {
-    await postProcess(concatOutput, outputFile, subtitles, bgmFile, bgmVolume)
-    await fs.unlink(concatOutput).catch(() => {})
+  try {
+    // Step 2: 拼接
+    const needsPostProcess = (subtitles && subtitles.length > 0) || bgmFile
+    const concatOutput = needsPostProcess
+      ? outputFile.replace('.mp4', '_concat_tmp.mp4')
+      : outputFile
+
+    if (processedFiles.length === 1) {
+      await fs.copyFile(processedFiles[0], concatOutput)
+    } else if (transition === 'smart' && panelTransitions) {
+      await concatWithSmartTransitions(processedFiles, concatOutput, panelTransitions)
+    } else if (transition === 'fade') {
+      await concatWithXfade(processedFiles, concatOutput, transitionDuration)
+    } else {
+      await concatWithDemuxer(processedFiles, concatOutput)
+    }
+
+    // Step 3: 后处理（字幕 + BGM）
+    if (needsPostProcess) {
+      await postProcess(concatOutput, outputFile, subtitles, bgmFile, bgmVolume)
+      await fs.unlink(concatOutput).catch(() => {})
+    }
+  } finally {
+    // 清理同步临时文件
+    for (const f of syncTempFiles) {
+      await fs.unlink(f).catch(() => {})
+    }
   }
 }
 
