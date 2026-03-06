@@ -5,7 +5,13 @@ import { TASK_TYPE } from '@/lib/task/types'
 
 /**
  * POST /api/v1/projects/:projectId/episodes/:episodeId/merge — 一键合成视频
- * Body: { transition?: 'none' | 'fade', locale? }
+ * Body: {
+ *   transition?: 'none' | 'fade' | 'smart',  // smart=根据面板元数据自动选择
+ *   subtitles?: boolean,    // 是否烧录字幕（默认 true）
+ *   bgmUrl?: string,        // BGM 音频 URL 或 COS key
+ *   bgmVolume?: number,     // BGM 音量 0-1（默认 0.15）
+ *   locale?: 'zh' | 'en',
+ * }
  */
 export const POST = apiV1Handler(async (request, ctx, routeContext) => {
   const { projectId, episodeId } = await routeContext.params
@@ -23,7 +29,10 @@ export const POST = apiV1Handler(async (request, ctx, routeContext) => {
 
   const body = await request.json().catch(() => ({}))
   const locale = (body.locale as string) || 'zh'
-  const transition = (body.transition as 'none' | 'fade') || 'none'
+  const transition = (body.transition as 'none' | 'fade' | 'smart') || 'none'
+  const subtitles = body.subtitles !== false
+  const bgmUrl = body.bgmUrl as string | undefined
+  const bgmVolume = typeof body.bgmVolume === 'number' ? body.bgmVolume : 0.15
 
   const result = await submitTask({
     userId: ctx.userId,
@@ -33,7 +42,7 @@ export const POST = apiV1Handler(async (request, ctx, routeContext) => {
     type: TASK_TYPE.VIDEO_MERGE,
     targetType: 'NovelPromotionEpisode',
     targetId: episodeId,
-    payload: { episodeId, transition },
+    payload: { episodeId, transition, subtitles, bgmUrl, bgmVolume },
     dedupeKey: `video_merge:${episodeId}`,
     maxAttempts: 2,
     billingInfo: { billable: false },

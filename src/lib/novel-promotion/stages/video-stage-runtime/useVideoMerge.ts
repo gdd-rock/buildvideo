@@ -96,7 +96,8 @@ export function useVideoMerge({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           episodeId,
-          transition: 'none',
+          transition: 'smart',
+          subtitles: true,
           panelPreferences,
         }),
       })

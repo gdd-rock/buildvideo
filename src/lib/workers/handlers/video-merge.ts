@@ -6,40 +6,63 @@ import { prisma } from '@/lib/prisma'
 import { uploadToCOS, getSignedUrl, toFetchableUrl } from '@/lib/cos'
 import { logInfo, logError } from '@/lib/logging/core'
 import { reportTaskProgress } from '@/lib/workers/shared'
-import { concatVideosWithFFmpeg } from '@/lib/video/ffmpeg-concat'
+import {
+  concatVideosWithFFmpeg,
+  getVideoDuration,
+  type SubtitleEntry,
+  type PanelTransitionInfo,
+} from '@/lib/video/ffmpeg-concat'
 import type { TaskJobData } from '@/lib/task/types'
 
 /**
  * 视频合成 Worker Handler
- * 下载所有镜头视频 → FFmpeg 拼接 → 上传 COS → 返回下载链接
+ * 下载所有镜头视频 → FFmpeg 拼接（含字幕/BGM/智能转场） → 上传 COS
  */
 export async function handleVideoMergeTask(job: Job<TaskJobData>) {
   const { episodeId, payload } = job.data
-  const transition = (payload?.transition as 'none' | 'fade') || 'none'
+  const transition = (payload?.transition as 'none' | 'fade' | 'smart') || 'none'
   const panelPreferences = (payload?.panelPreferences as Record<string, boolean>) || {}
+  const enableSubtitles = payload?.subtitles !== false // 默认开启
+  const bgmUrl = payload?.bgmUrl as string | undefined
+  const bgmVolume = typeof payload?.bgmVolume === 'number' ? payload.bgmVolume : 0.15
 
   if (!episodeId) {
     throw new Error('episodeId is required for video merge')
   }
 
-  await reportTaskProgress(job, 10, {
-    stage: 'video_merge_download',
-    stageLabel: '下载视频片段',
+  await reportTaskProgress(job, 5, {
+    stage: 'video_merge_prepare',
+    stageLabel: '准备合成数据',
     displayMode: 'detail',
   })
 
-  // 查询所有面板视频
+  // 查询面板+配音
   const episode = await prisma.novelPromotionEpisode.findUnique({
     where: { id: episodeId },
     include: {
       storyboards: {
         include: {
-          panels: { orderBy: { panelIndex: 'asc' } },
+          panels: {
+            orderBy: { panelIndex: 'asc' },
+            select: {
+              id: true,
+              panelIndex: true,
+              shotType: true,
+              linkedToNextPanel: true,
+              lipSyncVideoUrl: true,
+              videoUrl: true,
+              srtSegment: true,
+              storyboardId: true,
+            },
+          },
         },
         orderBy: { createdAt: 'asc' },
       },
-      clips: {
-        orderBy: { createdAt: 'asc' },
+      clips: { orderBy: { createdAt: 'asc' } },
+      voiceLines: {
+        where: { audioUrl: { not: null }, matchedPanelId: { not: null } },
+        orderBy: { lineIndex: 'asc' },
+        select: { content: true, speaker: true, matchedPanelId: true },
       },
     },
   })
@@ -48,11 +71,22 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
     throw new Error(`Episode not found: ${episodeId}`)
   }
 
+  // 构建面板 → 配音映射
+  const voiceByPanel = new Map<string, { content: string; speaker: string }>()
+  for (const vl of episode.voiceLines) {
+    if (vl.matchedPanelId) {
+      voiceByPanel.set(vl.matchedPanelId, { content: vl.content, speaker: vl.speaker })
+    }
+  }
+
   // 按 clipIndex + panelIndex 排序收集视频
   interface VideoInfo {
     videoKey: string
-    clipIndex: number
-    panelIndex: number
+    panelId: string
+    shotType: string | null
+    linkedToNextPanel: boolean
+    subtitle: string | null
+    speaker: string | null
   }
 
   const allClips = episode.clips || []
@@ -72,25 +106,27 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
       }
 
       if (videoKey) {
+        const voice = voiceByPanel.get(panel.id)
         videos.push({
           videoKey,
-          clipIndex: clipIndex >= 0 ? clipIndex : 999,
-          panelIndex: panel.panelIndex || 0,
+          panelId: panel.id,
+          shotType: panel.shotType,
+          linkedToNextPanel: panel.linkedToNextPanel,
+          subtitle: voice?.content || panel.srtSegment || null,
+          speaker: voice?.speaker || null,
         })
       }
     }
   }
 
-  videos.sort((a, b) => {
-    if (a.clipIndex !== b.clipIndex) return a.clipIndex - b.clipIndex
-    return a.panelIndex - b.panelIndex
-  })
+  // 使用 clipIndex 排序（保留插入顺序）
+  // videos 已按 storyboard.createdAt + panelIndex 排序
 
   if (videos.length === 0) {
     throw new Error('No videos found to merge')
   }
 
-  logInfo(`[video-merge] 共 ${videos.length} 个视频片段需要合并`)
+  logInfo(`[video-merge] ${videos.length} 个片段, transition=${transition}, subtitles=${enableSubtitles}, bgm=${!!bgmUrl}`)
 
   // 创建临时目录
   const tmpDir = path.join(os.tmpdir(), `merge-${job.data.taskId}`)
@@ -98,9 +134,15 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
 
   try {
     // 下载所有视频到本地
+    await reportTaskProgress(job, 10, {
+      stage: 'video_merge_download',
+      stageLabel: '下载视频片段',
+      displayMode: 'detail',
+    })
+
     const localFiles: string[] = []
     for (let i = 0; i < videos.length; i++) {
-      const progress = 10 + Math.floor((i / videos.length) * 50)
+      const progress = 10 + Math.floor((i / videos.length) * 40)
       await reportTaskProgress(job, progress, {
         stage: 'video_merge_download',
         stageLabel: `下载视频 ${i + 1}/${videos.length}`,
@@ -110,7 +152,6 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
       const video = videos[i]
       const localPath = path.join(tmpDir, `clip_${String(i).padStart(3, '0')}.mp4`)
 
-      // 生成可下载的 URL
       let fetchUrl: string
       if (video.videoKey.startsWith('http://') || video.videoKey.startsWith('https://')) {
         fetchUrl = video.videoKey
@@ -127,18 +168,71 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
       const buffer = Buffer.from(await response.arrayBuffer())
       await fs.writeFile(localPath, buffer)
       localFiles.push(localPath)
-
-      logInfo(`[video-merge] 已下载 ${i + 1}/${videos.length}: ${(buffer.length / 1024 / 1024).toFixed(1)}MB`)
     }
 
     if (localFiles.length === 0) {
       throw new Error('All video downloads failed')
     }
 
-    // FFmpeg 拼接
-    await reportTaskProgress(job, 65, {
+    // 下载 BGM（如果有）
+    let bgmLocalPath: string | undefined
+    if (bgmUrl) {
+      await reportTaskProgress(job, 52, {
+        stage: 'video_merge_bgm',
+        stageLabel: '下载背景音乐',
+        displayMode: 'detail',
+      })
+
+      try {
+        let bgmFetchUrl = bgmUrl
+        if (!bgmUrl.startsWith('http')) {
+          bgmFetchUrl = toFetchableUrl(getSignedUrl(bgmUrl, 3600))
+        }
+        const bgmRes = await fetch(bgmFetchUrl)
+        if (bgmRes.ok) {
+          bgmLocalPath = path.join(tmpDir, 'bgm.mp3')
+          await fs.writeFile(bgmLocalPath, Buffer.from(await bgmRes.arrayBuffer()))
+          logInfo(`[video-merge] BGM 下载完成`)
+        }
+      } catch (err) {
+        logError(`[video-merge] BGM 下载失败, 跳过:`, err)
+      }
+    }
+
+    // 构建字幕信息
+    let subtitleEntries: SubtitleEntry[] | undefined
+    if (enableSubtitles) {
+      const durations = await Promise.all(localFiles.map(getVideoDuration))
+      let currentTime = 0
+      subtitleEntries = []
+
+      for (let i = 0; i < localFiles.length; i++) {
+        const video = videos[i]
+        const dur = durations[i] || 0
+        if (video.subtitle && dur > 0) {
+          subtitleEntries.push({
+            startSec: currentTime + 0.2, // 稍微延后避免切口
+            endSec: currentTime + dur - 0.1,
+            text: video.subtitle,
+            speaker: video.speaker || undefined,
+          })
+        }
+        currentTime += dur
+      }
+
+      logInfo(`[video-merge] 生成 ${subtitleEntries.length} 条字幕`)
+    }
+
+    // 构建转场元数据
+    const panelTransitions: PanelTransitionInfo[] = videos.map(v => ({
+      shotType: v.shotType,
+      linkedToNextPanel: v.linkedToNextPanel,
+    }))
+
+    // FFmpeg 拼接 + 后处理
+    await reportTaskProgress(job, 55, {
       stage: 'video_merge_concat',
-      stageLabel: 'FFmpeg 拼接中',
+      stageLabel: 'FFmpeg 合成中',
       displayMode: 'detail',
     })
 
@@ -148,9 +242,13 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
       outputFile: outputPath,
       transition,
       transitionDuration: 0.5,
+      subtitles: subtitleEntries,
+      bgmFile: bgmLocalPath,
+      bgmVolume,
+      panelTransitions,
     })
 
-    logInfo(`[video-merge] FFmpeg 拼接完成`)
+    logInfo(`[video-merge] FFmpeg 合成完成`)
 
     // 上传到 COS
     await reportTaskProgress(job, 90, {
@@ -175,10 +273,12 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
       success: true,
       outputKey: cosKey,
       videoCount: localFiles.length,
+      subtitleCount: subtitleEntries?.length || 0,
+      hasBgm: !!bgmLocalPath,
+      transition,
       fileSizeMB: (outputBuffer.length / 1024 / 1024).toFixed(1),
     }
   } finally {
-    // 清理临时目录
     await fs.rm(tmpDir, { recursive: true, force: true }).catch(() => {})
   }
 }
