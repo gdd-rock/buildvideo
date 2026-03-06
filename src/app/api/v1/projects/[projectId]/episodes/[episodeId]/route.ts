@@ -30,9 +30,9 @@ export const GET = apiV1Handler(async (_request, ctx, routeContext) => {
           panels: {
             orderBy: { panelIndex: 'asc' },
             include: {
-              imageMedia: { select: { key: true } },
-              videoMedia: { select: { key: true } },
-              lipSyncVideoMedia: { select: { key: true } },
+              imageMedia: { select: { storageKey: true } },
+              videoMedia: { select: { storageKey: true } },
+              lipSyncVideoMedia: { select: { storageKey: true } },
             },
           },
         },
@@ -40,7 +40,7 @@ export const GET = apiV1Handler(async (_request, ctx, routeContext) => {
       voiceLines: {
         orderBy: { lineIndex: 'asc' },
         include: {
-          audioMedia: { select: { key: true } },
+          audioMedia: { select: { storageKey: true } },
         },
       },
       clips: true,
@@ -63,9 +63,9 @@ export const GET = apiV1Handler(async (_request, ctx, routeContext) => {
       location: panel.location,
       characters: panel.characters,
       duration: panel.duration,
-      imageUrl: mediaUrl(panel.imageMedia?.key, panel.imageUrl),
-      videoUrl: mediaUrl(panel.videoMedia?.key, panel.videoUrl),
-      lipSyncVideoUrl: mediaUrl(panel.lipSyncVideoMedia?.key, panel.lipSyncVideoUrl),
+      imageUrl: mediaUrl(panel.imageMedia?.storageKey, panel.imageUrl),
+      videoUrl: mediaUrl(panel.videoMedia?.storageKey, panel.videoUrl),
+      lipSyncVideoUrl: mediaUrl(panel.lipSyncVideoMedia?.storageKey, panel.lipSyncVideoUrl),
     })),
   }))
 
@@ -89,7 +89,7 @@ export const GET = apiV1Handler(async (_request, ctx, routeContext) => {
       lineIndex: vl.lineIndex,
       speaker: vl.speaker,
       content: vl.content,
-      audioUrl: mediaUrl(vl.audioMedia?.key, vl.audioUrl),
+      audioUrl: mediaUrl(vl.audioMedia?.storageKey, vl.audioUrl),
     })),
     createdAt: episode.createdAt,
     updatedAt: episode.updatedAt,
