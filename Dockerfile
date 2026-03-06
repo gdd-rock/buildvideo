@@ -24,7 +24,7 @@ WORKDIR /app
 
 ENV NODE_ENV=production
 
-RUN apk add --no-cache tini ffmpeg
+RUN apk add --no-cache tini ffmpeg font-noto-cjk fontconfig
 
 # node_modules（含 devDeps，因为 npm run start 需要 concurrently + tsx）
 COPY --from=builder /app/node_modules ./node_modules

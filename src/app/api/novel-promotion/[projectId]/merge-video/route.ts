@@ -22,13 +22,17 @@ export const POST = apiHandler(async (
   const { session } = authResult
 
   const body = await request.json()
-  const { episodeId, transition, panelPreferences, subtitles, bgmUrl, bgmVolume } = body as {
+  const { episodeId, transition, panelPreferences, subtitles, bgmUrl, bgmVolume, kenBurns, titleCards, introFade, outroFade } = body as {
     episodeId: string
     transition?: 'none' | 'fade' | 'smart'
     panelPreferences?: Record<string, boolean>
     subtitles?: boolean
     bgmUrl?: string
     bgmVolume?: number
+    kenBurns?: boolean
+    titleCards?: boolean
+    introFade?: number
+    outroFade?: number
   }
 
   if (!episodeId) {
@@ -61,6 +65,10 @@ export const POST = apiHandler(async (
       subtitles: subtitles !== false,
       bgmUrl: bgmUrl || undefined,
       bgmVolume: typeof bgmVolume === 'number' ? bgmVolume : 0.15,
+      kenBurns: kenBurns !== false,
+      titleCards: titleCards === true,
+      introFade: typeof introFade === 'number' ? introFade : 1.0,
+      outroFade: typeof outroFade === 'number' ? outroFade : 1.5,
     },
     dedupeKey: `video_merge:${episodeId}`,
     maxAttempts: 2,

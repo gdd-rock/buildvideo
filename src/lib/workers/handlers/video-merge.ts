@@ -9,9 +9,12 @@ import { reportTaskProgress } from '@/lib/workers/shared'
 import {
   concatVideosWithFFmpeg,
   getVideoDuration,
+  resolveKenBurns,
   type SubtitleEntry,
   type PanelTransitionInfo,
   type ClipSyncInfo,
+  type KenBurnsEffect,
+  type TitleCard,
 } from '@/lib/video/ffmpeg-concat'
 import type { TaskJobData } from '@/lib/task/types'
 
@@ -26,6 +29,10 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
   const enableSubtitles = payload?.subtitles !== false // 默认开启
   const bgmUrl = payload?.bgmUrl as string | undefined
   const bgmVolume = typeof payload?.bgmVolume === 'number' ? payload.bgmVolume : 0.15
+  const enableKenBurns = payload?.kenBurns !== false // 默认开启
+  const enableTitleCards = payload?.titleCards === true // 默认关闭
+  const introFade = typeof payload?.introFade === 'number' ? payload.introFade : 1.0
+  const outroFade = typeof payload?.outroFade === 'number' ? payload.outroFade : 1.5
 
   if (!episodeId) {
     throw new Error('episodeId is required for video merge')
@@ -49,6 +56,7 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
               id: true,
               panelIndex: true,
               shotType: true,
+              cameraMove: true,
               linkedToNextPanel: true,
               lipSyncVideoUrl: true,
               videoUrl: true,
@@ -85,11 +93,14 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
     videoKey: string
     panelId: string
     shotType: string | null
+    cameraMove: string | null
     linkedToNextPanel: boolean
     subtitle: string | null
     speaker: string | null
     voiceAudioUrl: string | null
     voiceAudioDuration: number | null
+    clipSummary?: string
+    clipIndex?: number
   }
 
   const allClips = episode.clips || []
@@ -110,15 +121,19 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
 
       if (videoKey) {
         const voice = voiceByPanel.get(panel.id)
+        const clip = allClips[clipIndex >= 0 ? clipIndex : 0]
         videos.push({
           videoKey,
           panelId: panel.id,
           shotType: panel.shotType,
+          cameraMove: panel.cameraMove,
           linkedToNextPanel: panel.linkedToNextPanel,
           subtitle: voice?.content || panel.srtSegment || null,
           speaker: voice?.speaker || null,
           voiceAudioUrl: voice?.audioUrl || null,
           voiceAudioDuration: voice?.audioDuration ? voice.audioDuration / 1000 : null, // ms → sec
+          clipSummary: clip?.summary || undefined,
+          clipIndex: clipIndex >= 0 ? clipIndex : 0,
         })
       }
     }
@@ -131,7 +146,7 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
     throw new Error('No videos found to merge')
   }
 
-  logInfo(`[video-merge] ${videos.length} 个片段, transition=${transition}, subtitles=${enableSubtitles}, bgm=${!!bgmUrl}`)
+  logInfo(`[video-merge] ${videos.length} 个片段, transition=${transition}, subtitles=${enableSubtitles}, bgm=${!!bgmUrl}, kenBurns=${enableKenBurns}`)
 
   // 创建临时目录
   const tmpDir = path.join(os.tmpdir(), `merge-${job.data.taskId}`)
@@ -275,6 +290,32 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
       linkedToNextPanel: v.linkedToNextPanel,
     }))
 
+    // 构建 Ken Burns 效果
+    let kenBurnsEffects: KenBurnsEffect[] | undefined
+    if (enableKenBurns) {
+      kenBurnsEffects = videos.map(v => resolveKenBurns(v.cameraMove))
+      const kbCount = kenBurnsEffects.filter(e => e.type !== 'none').length
+      logInfo(`[video-merge] Ken Burns 运镜: ${kbCount}/${videos.length} 个片段`)
+    }
+
+    // 构建标题卡（按 clip 边界插入）
+    let titleCards: TitleCard[] | undefined
+    if (enableTitleCards) {
+      titleCards = []
+      let lastClipIndex = -1
+      for (let i = 0; i < videos.length; i++) {
+        const ci = videos[i].clipIndex ?? 0
+        if (ci !== lastClipIndex && videos[i].clipSummary) {
+          titleCards.push({
+            text: videos[i].clipSummary!,
+            insertBefore: i,
+          })
+          lastClipIndex = ci
+        }
+      }
+      logInfo(`[video-merge] 标题卡: ${titleCards.length} 个`)
+    }
+
     // FFmpeg 拼接 + 后处理
     await reportTaskProgress(job, 55, {
       stage: 'video_merge_concat',
@@ -293,6 +334,10 @@ export async function handleVideoMergeTask(job: Job<TaskJobData>) {
       bgmVolume,
       panelTransitions,
       clipSync,
+      kenBurnsEffects,
+      titleCards,
+      introFadeDuration: introFade,
+      outroFadeDuration: outroFade,
     })
 
     logInfo(`[video-merge] FFmpeg 合成完成`)

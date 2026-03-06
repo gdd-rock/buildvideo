@@ -33,6 +33,10 @@ export const POST = apiV1Handler(async (request, ctx, routeContext) => {
   const subtitles = body.subtitles !== false
   const bgmUrl = body.bgmUrl as string | undefined
   const bgmVolume = typeof body.bgmVolume === 'number' ? body.bgmVolume : 0.15
+  const kenBurns = body.kenBurns !== false
+  const titleCards = body.titleCards === true
+  const introFade = typeof body.introFade === 'number' ? body.introFade : 1.0
+  const outroFade = typeof body.outroFade === 'number' ? body.outroFade : 1.5
 
   const result = await submitTask({
     userId: ctx.userId,
@@ -42,7 +46,7 @@ export const POST = apiV1Handler(async (request, ctx, routeContext) => {
     type: TASK_TYPE.VIDEO_MERGE,
     targetType: 'NovelPromotionEpisode',
     targetId: episodeId,
-    payload: { episodeId, transition, subtitles, bgmUrl, bgmVolume },
+    payload: { episodeId, transition, subtitles, bgmUrl, bgmVolume, kenBurns, titleCards, introFade, outroFade },
     dedupeKey: `video_merge:${episodeId}`,
     maxAttempts: 2,
     billingInfo: { billable: false },
