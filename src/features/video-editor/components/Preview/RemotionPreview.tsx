@@ -126,9 +126,9 @@ export const RemotionPreview: React.FC<RemotionPreviewProps> = ({
 
     return (
         <div style={{
-            width: '100%',
-            aspectRatio: `${project.config.width} / ${project.config.height}`,
+            maxWidth: '100%',
             maxHeight: '100%',
+            aspectRatio: `${project.config.width} / ${project.config.height}`,
             background: 'var(--glass-overlay-strong)',
             borderRadius: '8px',
             overflow: 'hidden'
@@ -149,9 +149,9 @@ export const RemotionPreview: React.FC<RemotionPreviewProps> = ({
                     width: '100%',
                     height: '100%'
                 }}
-                controls={false}  // 使用自定义控制
+                controls={false}
                 loop={false}
-                clickToPlay={false}  // 禁用点击播放，由外部控制
+                clickToPlay={false}
             />
         </div>
     )
