@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import { ApiError } from '@/lib/api-errors'
+import { assertSafeUrl } from '@/lib/security/url-validator'
 
 type SupportedProvider =
   | 'openrouter'
@@ -55,6 +56,7 @@ function requireBaseUrl(payload: TestConnectionPayload): string {
   if (!baseUrl) {
     throw new ApiError('INVALID_PARAMS', { message: '自定义渠道需要提供 baseUrl' })
   }
+  assertSafeUrl(baseUrl)
   return baseUrl
 }
 

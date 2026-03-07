@@ -60,7 +60,8 @@ export const authOptions: any = {
     })
   ],
   session: {
-    strategy: "jwt"
+    strategy: "jwt",
+    maxAge: 7 * 24 * 60 * 60, // 7 天过期
   },
   pages: {
     signIn: "/auth/signin",

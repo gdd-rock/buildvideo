@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server'
 import { getSignedUrl, toFetchableUrl } from '@/lib/cos'
 import { requireProjectAuthLight, isErrorResponse } from '@/lib/api-auth'
 import { apiHandler, ApiError } from '@/lib/api-errors'
+import { assertAllowedMediaUrl } from '@/lib/security/url-validator'
 
 /**
  * 代理下载单个视频文件
@@ -27,6 +28,7 @@ export const GET = apiHandler(async (
     // 生成签名 URL 并下载
     let fetchUrl: string
     if (videoKey.startsWith('http://') || videoKey.startsWith('https://')) {
+        assertAllowedMediaUrl(videoKey)
         fetchUrl = videoKey
     } else {
         fetchUrl = toFetchableUrl(getSignedUrl(videoKey, 3600))

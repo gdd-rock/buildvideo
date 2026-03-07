@@ -42,9 +42,8 @@ async function getInternalTaskSession(): Promise<AuthSession | null> {
     const token = incomingHeaders.get('x-internal-task-token') || ''
     const userId = incomingHeaders.get('x-internal-user-id') || ''
     if (!userId) return null
-    if (expectedToken) {
-        if (token !== expectedToken) return null
-    } else if (process.env.NODE_ENV === 'production') {
+    // 安全修复：INTERNAL_TASK_TOKEN 未设置时，所有环境均拒绝内部认证
+    if (!expectedToken || token !== expectedToken) {
         return null
     }
 

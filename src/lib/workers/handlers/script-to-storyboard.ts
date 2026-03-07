@@ -96,9 +96,10 @@ export async function handleScriptToStoryboardTask(job: Job<TaskJobData>) {
     throw new Error('No clips found')
   }
 
+  const analysisModelFromPayload = typeof payload.analysisModel === 'string' ? payload.analysisModel.trim() : ''
   const model = await resolveAnalysisModel({
     userId: job.data.userId,
-    inputModel,
+    inputModel: inputModel || analysisModelFromPayload,
     projectAnalysisModel: novelData.analysisModel,
   })
   const llmCapabilityOptions = await resolveProjectModelCapabilityGenerationOptions({

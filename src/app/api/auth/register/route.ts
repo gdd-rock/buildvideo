@@ -16,8 +16,12 @@ export const POST = apiHandler(async (request: NextRequest) => {
     throw new ApiError('INVALID_PARAMS')
   }
 
-  if (password.length < 6) {
-    logAuthAction('REGISTER', name, { error: 'Password too short' })
+  if (password.length < 8) {
+    logAuthAction('REGISTER', name, { error: 'Password too short (min 8)' })
+    throw new ApiError('INVALID_PARAMS')
+  }
+  if (!/[a-zA-Z]/.test(password) || !/\d/.test(password)) {
+    logAuthAction('REGISTER', name, { error: 'Password must contain letters and numbers' })
     throw new ApiError('INVALID_PARAMS')
   }
 

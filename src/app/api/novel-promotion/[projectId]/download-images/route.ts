@@ -6,6 +6,7 @@ import { getCOSClient, toFetchableUrl } from '@/lib/cos'
 import { resolveStorageKeyFromMediaValue } from '@/lib/media/service'
 import { requireProjectAuthLight, isErrorResponse } from '@/lib/api-auth'
 import { apiHandler, ApiError } from '@/lib/api-errors'
+import { assertAllowedMediaUrl } from '@/lib/security/url-validator'
 
 interface PanelData {
   panelIndex: number | null
@@ -168,7 +169,8 @@ export const GET = apiHandler(async (
         const storageKey = await resolveStorageKeyFromMediaValue(image.imageUrl)
 
         if (image.imageUrl.startsWith('http://') || image.imageUrl.startsWith('https://')) {
-          // 外部 URL，直接下载
+          // 外部 URL，校验后下载
+          assertAllowedMediaUrl(image.imageUrl)
           const response = await fetch(toFetchableUrl(image.imageUrl))
           if (!response.ok) {
             throw new Error(`Failed to fetch: ${response.statusText}`)

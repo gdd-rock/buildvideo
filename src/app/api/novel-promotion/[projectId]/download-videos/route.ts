@@ -6,6 +6,7 @@ import { getCOSClient, toFetchableUrl } from '@/lib/cos'
 import { resolveStorageKeyFromMediaValue } from '@/lib/media/service'
 import { requireProjectAuthLight, isErrorResponse } from '@/lib/api-auth'
 import { apiHandler, ApiError } from '@/lib/api-errors'
+import { assertAllowedMediaUrl } from '@/lib/security/url-validator'
 
 interface PanelData {
   panelIndex: number | null
@@ -200,6 +201,7 @@ export const POST = apiHandler(async (
       const storageKey = await resolveStorageKeyFromMediaValue(video.videoUrl)
 
       if (video.videoUrl.startsWith('http://') || video.videoUrl.startsWith('https://')) {
+        assertAllowedMediaUrl(video.videoUrl)
         const response = await fetch(toFetchableUrl(video.videoUrl))
         if (!response.ok) {
           throw new Error(`Failed to fetch: ${response.statusText}`)

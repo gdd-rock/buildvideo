@@ -19,7 +19,9 @@ export function parseVisualResponse(responseText: string): AnyObj {
   return robustJsonParse<AnyObj>(responseText)
 }
 
-export async function resolveProjectModel(projectId: string) {
+export type ResolvedProjectModel = Awaited<ReturnType<typeof resolveProjectModel>>
+
+export async function resolveProjectModel(projectId: string, fallbackAnalysisModel?: string) {
   const project = await prisma.project.findUnique({
     where: { id: projectId },
     select: {
@@ -34,6 +36,9 @@ export async function resolveProjectModel(projectId: string) {
   })
   if (!project) throw new Error('Project not found')
   if (!project.novelPromotionData) throw new Error('Novel promotion data not found')
+  if (!project.novelPromotionData.analysisModel && fallbackAnalysisModel) {
+    project.novelPromotionData.analysisModel = fallbackAnalysisModel
+  }
   if (!project.novelPromotionData.analysisModel) throw new Error('请先在项目设置中配置分析模型')
   return project
 }

@@ -1,10 +1,13 @@
 'use client'
 
+import dynamic from 'next/dynamic'
 import ConfigStage from './ConfigStage'
 import ScriptStage from './ScriptStage'
 import StoryboardStage from './StoryboardStage'
 import VideoStageRoute from './VideoStageRoute'
 import VoiceStageRoute from './VoiceStageRoute'
+
+const EditorStageRoute = dynamic(() => import('./EditorStageRoute'), { ssr: false })
 
 interface WorkspaceStageContentProps {
   currentStage: string
@@ -22,6 +25,8 @@ export default function WorkspaceStageContent({
       {currentStage === 'storyboard' && <StoryboardStage />}
 
       {currentStage === 'videos' && <VideoStageRoute />}
+
+      {currentStage === 'editor' && <EditorStageRoute />}
 
       {currentStage === 'voice' && <VoiceStageRoute />}
     </div>
