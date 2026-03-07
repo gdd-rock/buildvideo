@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { AbsoluteFill, Sequence, Video, Audio, useCurrentFrame, interpolate } from 'remotion'
 import { VideoClip, BgmClip, EditorConfig } from '../types/editor.types'
 import { computeClipPositions } from '../utils/time-utils'
@@ -104,6 +104,7 @@ const ClipRenderer: React.FC<ClipRendererProps> = ({
 }) => {
     const frame = useCurrentFrame()
     const clipDuration = clip.durationInFrames
+    const [videoError, setVideoError] = useState(false)
 
     // 计算转场效果
     let opacity = 1
@@ -153,16 +154,35 @@ const ClipRenderer: React.FC<ClipRendererProps> = ({
 
     return (
         <AbsoluteFill style={{ opacity, transform }}>
-            <Video
-                src={clip.src}
-                startFrom={clip.trim?.from || 0}
-                playbackRate={clip.speed || 1}
-                style={{
-                    width: '100%',
-                    height: '100%',
-                    objectFit: 'cover'
-                }}
-            />
+            {videoError ? (
+                <AbsoluteFill style={{
+                    backgroundColor: '#1a1a2e',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                }}>
+                    <div style={{
+                        color: '#666',
+                        fontSize: '16px',
+                        textAlign: 'center',
+                    }}>
+                        <div style={{ fontSize: '32px', marginBottom: '8px' }}>⚠</div>
+                        视频加载失败
+                    </div>
+                </AbsoluteFill>
+            ) : (
+                <Video
+                    src={clip.src}
+                    startFrom={clip.trim?.from || 0}
+                    playbackRate={clip.speed || 1}
+                    onError={() => setVideoError(true)}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover'
+                    }}
+                />
+            )}
 
             {clip.attachment?.audio && (
                 <Audio
