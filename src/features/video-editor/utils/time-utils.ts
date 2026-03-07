@@ -12,7 +12,6 @@ export function calculateTimelineDuration(clips: VideoClip[]): number {
 
         // 最后一个片段不减去转场时间
         if (index < clips.length - 1 && clip.transition) {
-            // 转场会让总时长减少（重叠部分）
             duration -= Math.floor(clip.transition.durationInFrames / 2)
         }
 
@@ -31,18 +30,13 @@ export function computeClipPositions(clips: VideoClip[]): ComputedClip[] {
         const startFrame = currentFrame
         const endFrame = startFrame + clip.durationInFrames
 
-        // 计算下一个片段的起始位置（考虑转场重叠）
         if (clip.transition && index < clips.length - 1) {
             currentFrame = endFrame - Math.floor(clip.transition.durationInFrames / 2)
         } else {
             currentFrame = endFrame
         }
 
-        return {
-            ...clip,
-            startFrame,
-            endFrame
-        }
+        return { ...clip, startFrame, endFrame }
     })
 }
 
@@ -82,7 +76,7 @@ export function createDefaultProject(episodeId: string): VideoEditorProject {
     return {
         id: `editor_${Date.now()}`,
         episodeId,
-        schemaVersion: '1.0',
+        schemaVersion: '1.1',
         config: {
             fps: 30,
             width: 1920,

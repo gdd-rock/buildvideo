@@ -176,7 +176,8 @@
       "videoTrack": "视频",
       "emptyHint": "从素材库拖拽视频片段到这里",
       "audioTrack": "配音",
-      "audioBadge": "配"
+      "audioBadge": "配",
+      "subtitleTrack": "字幕"
     },
     "transition": {
       "title": "转场效果",
@@ -187,7 +188,23 @@
         "fade": "淡入淡出",
         "slide": "滑动"
       }
-    }
+    },
+    "tools": {
+      "select": "选择",
+      "trim": "裁剪",
+      "split": "剪切",
+      "hand": "平移"
+    },
+    "ai": {
+      "smartAssembly": "智能装配",
+      "autoTransitions": "智能转场",
+      "aiCommand": "AI指令",
+      "commandPlaceholder": "输入指令，如\"让节奏更快\"...",
+      "unknownCommand": "未识别的指令"
+    },
+    "undo": "撤销",
+    "redo": "重做",
+    "speed": "速度"
   },
   "errors": {
     "unknownError": "未知错误"

@@ -12,6 +12,7 @@ export type {
     ClipMetadata,
     EditorConfig,
     TimelineState,
+    EditorTool,
     ComputedClip,
     SaveEditorProjectRequest,
     RenderRequest,
@@ -33,6 +34,14 @@ export {
     validateProjectData
 } from './utils/migration'
 
+export {
+    autoSelectTransition,
+    applyAutoTransitions
+} from './utils/ai-transitions'
+
+export type { AssemblyStyle } from './utils/ai-assembly'
+export { autoAssembleTimeline } from './utils/ai-assembly'
+
 // Components
 export { VideoEditorStage } from './components/VideoEditorStage'
 export { TransitionPicker } from './components/TransitionPicker'
@@ -40,3 +49,6 @@ export { TransitionPicker } from './components/TransitionPicker'
 // Hooks
 export { useEditorState } from './hooks/useEditorState'
 export { useEditorActions, createProjectFromPanels } from './hooks/useEditorActions'
+export { useUndoRedo } from './hooks/useUndoRedo'
+export { useEditorKeyboard } from './hooks/useEditorKeyboard'
+export { useThumbnailStrip } from './hooks/useThumbnailStrip'

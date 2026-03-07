@@ -1,12 +1,12 @@
 'use client'
 
-import React from 'react'
+import React, { useRef, useState, useCallback, useEffect } from 'react'
 import { useTranslations } from 'next-intl'
 import {
     DndContext,
     closestCenter,
-    KeyboardSensor,
     PointerSensor,
+    KeyboardSensor,
     useSensor,
     useSensors,
     DragEndEvent
@@ -14,12 +14,15 @@ import {
 import {
     SortableContext,
     sortableKeyboardCoordinates,
-    horizontalListSortingStrategy,
-    useSortable
+    horizontalListSortingStrategy
 } from '@dnd-kit/sortable'
-import { CSS } from '@dnd-kit/utilities'
-import { VideoClip, TimelineState, EditorConfig } from '../../types/editor.types'
-import { framesToTime } from '../../utils/time-utils'
+import { VideoClip, TimelineState, EditorConfig, EditorTool } from '../../types/editor.types'
+import { framesToTime, calculateTimelineDuration } from '../../utils/time-utils'
+import { useTimelineDimensions } from '../../hooks/useTimelineDimensions'
+import { TimelineRuler } from './TimelineRuler'
+import { TimelinePlayhead } from './TimelinePlayhead'
+import { TimelineToolbar } from './TimelineToolbar'
+import { TimelineClipBlock } from './TimelineClipBlock'
 
 interface TimelineProps {
     clips: VideoClip[]
@@ -29,11 +32,15 @@ interface TimelineProps {
     onSelectClip: (clipId: string | null) => void
     onZoomChange: (zoom: number) => void
     onSeek?: (frame: number) => void
+    onScrollXChange?: (scrollX: number) => void
+    onToolChange?: (tool: EditorTool) => void
+    onTrimClip?: (clipId: string, edge: 'left' | 'right', deltaFrames: number) => void
+    onSplitAtFrame?: (frame: number) => void
 }
 
 /**
- * 时间轴主组件
- * 使用 dnd-kit 实现拖拽排序
+ * 时间轴主组件 (CapCut 风格)
+ * 缩略图条 + 标尺 + 播放头 + 拖拽排序 + 裁剪手柄
  */
 export const Timeline: React.FC<TimelineProps> = ({
     clips,
@@ -42,26 +49,39 @@ export const Timeline: React.FC<TimelineProps> = ({
     onReorder,
     onSelectClip,
     onZoomChange,
-    onSeek
+    onSeek,
+    onScrollXChange,
+    onToolChange,
+    onTrimClip,
+    onSplitAtFrame
 }) => {
     const t = useTranslations('video')
-    // 计算总时长和播放头位置
-    const totalDuration = clips.reduce((sum, clip) => sum + clip.durationInFrames, 0)
-    const playheadPosition = totalDuration > 0 ? (timelineState.currentFrame / totalDuration) * 100 : 0
-    const sensors = useSensors(
-        useSensor(PointerSensor, {
-            activationConstraint: {
-                distance: 5 // 5px 移动才开始拖拽
+    const containerRef = useRef<HTMLDivElement>(null)
+    const [containerWidth, setContainerWidth] = useState(800)
+
+    const totalDuration = calculateTimelineDuration(clips)
+    const { pixelsPerFrame, framesToPixels } = useTimelineDimensions(config.fps, timelineState.zoom)
+
+    // 监听容器宽度
+    useEffect(() => {
+        const el = containerRef.current
+        if (!el) return
+        const observer = new ResizeObserver(entries => {
+            for (const entry of entries) {
+                setContainerWidth(entry.contentRect.width)
             }
-        }),
-        useSensor(KeyboardSensor, {
-            coordinateGetter: sortableKeyboardCoordinates
         })
+        observer.observe(el)
+        return () => observer.disconnect()
+    }, [])
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+        useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
     )
 
     const handleDragEnd = (event: DragEndEvent) => {
         const { active, over } = event
-
         if (over && active.id !== over.id) {
             const oldIndex = clips.findIndex(c => c.id === active.id)
             const newIndex = clips.findIndex(c => c.id === over.id)
@@ -69,308 +89,230 @@ export const Timeline: React.FC<TimelineProps> = ({
         }
     }
 
-    return (
-        <div className="timeline" style={{
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '8px',
-            padding: '12px',
-            background: 'var(--glass-bg-surface)',
-            borderRadius: '12px',
-            border: '1px solid var(--glass-stroke-base)',
-            height: '100%'
-        }}>
-            {/* 缩放控制 */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '8px'
-            }}>
-                <span style={{ fontSize: '12px', color: 'var(--glass-text-secondary)' }}>{t('editor.timeline.zoomLabel')}</span>
-                <input
-                    type="range"
-                    min="0.5"
-                    max="3"
-                    step="0.1"
-                    value={timelineState.zoom}
-                    onChange={(e) => onZoomChange(parseFloat(e.target.value))}
-                    style={{ width: '100px' }}
-                />
-                <span style={{ fontSize: '12px', color: 'var(--glass-text-tertiary)' }}>
-                    {Math.round(timelineState.zoom * 100)}%
-                </span>
-            </div>
+    // 裁剪手柄拖拽
+    const handleTrimStart = useCallback((clipId: string, edge: 'left' | 'right') => {
+        let currentStartX = 0
+        const moveHandler = (e: MouseEvent) => {
+            if (currentStartX === 0) {
+                currentStartX = e.clientX
+                return
+            }
+            const deltaX = e.clientX - currentStartX
+            const deltaFrames = Math.round(deltaX / pixelsPerFrame)
+            if (deltaFrames !== 0) {
+                onTrimClip?.(clipId, edge, deltaFrames)
+                currentStartX = e.clientX
+            }
+        }
+        const upHandler = () => {
+            window.removeEventListener('mousemove', moveHandler)
+            window.removeEventListener('mouseup', upHandler)
+        }
+        window.addEventListener('mousemove', moveHandler)
+        window.addEventListener('mouseup', upHandler)
+    }, [pixelsPerFrame, onTrimClip])
 
-            {/* 进度条 + 播放头 */}
-            <div
-                style={{
-                    position: 'relative',
-                    height: '24px',
-                    background: 'var(--glass-bg-muted)',
-                    border: '1px solid var(--glass-stroke-base)',
-                    borderRadius: '4px',
-                    cursor: 'pointer',
-                    marginLeft: '70px'  // 与轨道标签对齐
-                }}
-                onClick={(e) => {
-                    if (!onSeek || totalDuration === 0) return
-                    const rect = e.currentTarget.getBoundingClientRect()
-                    const x = e.clientX - rect.left
-                    const percent = x / rect.width
-                    const frame = Math.round(percent * totalDuration)
-                    onSeek(Math.max(0, Math.min(totalDuration, frame)))
-                }}
-            >
-                {/* 已播放部分 */}
-                <div style={{
-                    position: 'absolute',
-                    left: 0,
-                    top: 0,
-                    height: '100%',
-                    width: `${playheadPosition}%`,
-                    background: 'linear-gradient(90deg, var(--glass-accent-from) 0%, var(--glass-accent-to) 100%)',
-                    borderRadius: '4px 0 0 4px',
-                    transition: timelineState.playing ? 'none' : 'width 0.1s'
-                }} />
-                {/* 播放头指示器 */}
-                <div style={{
-                    position: 'absolute',
-                    left: `${playheadPosition}%`,
-                    top: '-4px',
-                    bottom: '-4px',
-                    width: '3px',
-                    background: 'var(--glass-accent-to)',
-                    borderRadius: '2px',
-                    boxShadow: '0 0 8px var(--glass-accent-shadow-strong)',
-                    transform: 'translateX(-50%)',
-                    transition: timelineState.playing ? 'none' : 'left 0.1s'
-                }} />
-                {/* 时间标记 */}
-                <div style={{
-                    position: 'absolute',
-                    right: '8px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    fontSize: '10px',
-                    color: 'var(--glass-text-tertiary)'
-                }}>
-                    {framesToTime(timelineState.currentFrame, config.fps)} / {framesToTime(totalDuration, config.fps)}
-                </div>
-            </div>
+    // 时间轴点击定位/分割
+    const handleTrackAreaClick = useCallback((e: React.MouseEvent) => {
+        const target = e.target as HTMLElement
+        // 如果点击的是片段内的元素，不处理
+        if (target.closest('[data-clip-block]')) return
 
-            {/* 视频轨道 */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                height: '56px',
-                background: 'var(--glass-bg-surface-strong)',
-                border: '1px solid var(--glass-stroke-base)',
-                borderRadius: '6px',
-                padding: '0 12px'
-            }}>
-                <span style={{
-                    fontSize: '12px',
-                    color: 'var(--glass-text-secondary)',
-                    width: '70px',
-                    flexShrink: 0
-                }}>
-                    {t('editor.timeline.videoTrack')}
-                </span>
+        const trackArea = e.currentTarget
+        const rect = trackArea.getBoundingClientRect()
+        const x = e.clientX - rect.left - 60 + timelineState.scrollX // 60px = 轨道标签宽度
+        if (x < 0) return
+        const frame = Math.round(x / pixelsPerFrame)
 
-                <DndContext
-                    sensors={sensors}
-                    collisionDetection={closestCenter}
-                    onDragEnd={handleDragEnd}
-                >
-                    <SortableContext
-                        items={clips.map(c => c.id)}
-                        strategy={horizontalListSortingStrategy}
-                    >
-                        <div style={{
-                            display: 'flex',
-                            gap: '4px',
-                            flex: 1,
-                            overflowX: 'auto',
-                            paddingRight: '12px'
-                        }}>
-                            {clips.map((clip, index) => (
-                                <SortableClip
-                                    key={clip.id}
-                                    clip={clip}
-                                    index={index}
-                                    isSelected={timelineState.selectedClipId === clip.id}
-                                    zoom={timelineState.zoom}
-                                    fps={config.fps}
-                                    onClick={() => onSelectClip(clip.id)}
-                                />
-                            ))}
-                            {clips.length === 0 && (
-                                <span style={{ fontSize: '12px', color: 'var(--glass-text-tertiary)' }}>
-                                    {t('editor.timeline.emptyHint')}
-                                </span>
-                            )}
-                        </div>
-                    </SortableContext>
-                </DndContext>
-            </div>
+        if (timelineState.tool === 'split') {
+            onSplitAtFrame?.(frame)
+        } else {
+            onSeek?.(Math.max(0, Math.min(totalDuration, frame)))
+        }
+    }, [pixelsPerFrame, timelineState.scrollX, timelineState.tool, totalDuration, onSeek, onSplitAtFrame])
 
-            {/* 配音轨道 (显示附属音频) */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                height: '40px',
-                background: 'var(--glass-bg-surface-strong)',
-                border: '1px solid var(--glass-stroke-base)',
-                borderRadius: '6px',
-                padding: '0 12px'
-            }}>
-                <span style={{
-                    fontSize: '12px',
-                    color: 'var(--glass-text-secondary)',
-                    width: '70px',
-                    flexShrink: 0
-                }}>
-                    {t('editor.timeline.audioTrack')}
-                </span>
-                <div style={{ display: 'flex', gap: '4px', flex: 1 }}>
-                    {clips.filter(c => c.attachment?.audio).map((clip) => (
-                        <div
-                            key={`audio-${clip.id}`}
-                            style={{
-                                width: `${clip.durationInFrames * timelineState.zoom * 2}px`,
-                                height: '28px',
-                                background: 'var(--glass-tone-success-bg)',
-                                borderRadius: '4px',
-                                fontSize: '10px',
-                                color: 'var(--glass-tone-success-fg)',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                flexShrink: 0
-                            }}
-                        >
-                            {t('editor.timeline.audioBadge')}
-                        </div>
-                    ))}
-                </div>
-            </div>
+    // 滚轮缩放/滚动
+    const handleWheel = useCallback((e: React.WheelEvent) => {
+        if (e.ctrlKey || e.metaKey) {
+            e.preventDefault()
+            const delta = e.deltaY > 0 ? -0.1 : 0.1
+            onZoomChange(timelineState.zoom + delta)
+        } else {
+            onScrollXChange?.(timelineState.scrollX + e.deltaX + e.deltaY)
+        }
+    }, [timelineState.zoom, timelineState.scrollX, onZoomChange, onScrollXChange])
 
-            {/* BGM 轨道 */}
-            <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                height: '40px',
-                background: 'var(--glass-bg-surface-strong)',
-                border: '1px solid var(--glass-stroke-base)',
-                borderRadius: '6px',
-                padding: '0 12px'
-            }}>
-                <span style={{
-                    fontSize: '12px',
-                    color: 'var(--glass-text-secondary)',
-                    width: '70px',
-                    flexShrink: 0
-                }}>
-                    BGM
-                </span>
-            </div>
-        </div>
-    )
-}
-
-/**
- * 可拖拽的片段组件
- */
-interface SortableClipProps {
-    clip: VideoClip
-    index: number
-    isSelected: boolean
-    zoom: number
-    fps: number
-    onClick: () => void
-}
-
-const SortableClip: React.FC<SortableClipProps> = ({
-    clip,
-    index,
-    isSelected,
-    zoom,
-    fps,
-    onClick
-}) => {
-    const {
-        attributes,
-        listeners,
-        setNodeRef,
-        transform,
-        transition,
-        isDragging
-    } = useSortable({ id: clip.id })
-
-    const style: React.CSSProperties = {
-        transform: CSS.Transform.toString(transform),
-        transition,
-        width: `${clip.durationInFrames * zoom * 2}px`,
-        minWidth: '60px',
-        height: '40px',
-        background: isSelected
-            ? 'var(--glass-accent-from)'
-            : isDragging
-                ? 'var(--glass-bg-muted)'
-                : 'var(--glass-bg-surface)',
-        borderRadius: '4px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '11px',
-        color: isSelected ? 'var(--glass-text-on-accent)' : 'var(--glass-text-primary)',
-        cursor: isDragging ? 'grabbing' : 'grab',
-        flexShrink: 0,
-        border: isSelected ? '2px solid var(--glass-stroke-focus)' : '1px solid var(--glass-stroke-base)',
-        opacity: isDragging ? 0.8 : 1,
-        zIndex: isDragging ? 100 : 1,
-        position: 'relative'
-    }
+    const currentTime = framesToTime(timelineState.currentFrame, config.fps)
+    const totalTime = framesToTime(totalDuration, config.fps)
+    const trackLabel = 'var(--glass-text-secondary)'
 
     return (
         <div
-            ref={setNodeRef}
-            style={style}
-            onClick={onClick}
-            {...attributes}
-            {...listeners}
+            ref={containerRef}
+            className="timeline-v2"
+            style={{
+                display: 'flex',
+                flexDirection: 'column',
+                height: '100%',
+                background: 'var(--glass-bg-surface)',
+                userSelect: 'none'
+            }}
+            onWheel={handleWheel}
         >
-            <span style={{ fontWeight: 'bold' }}>{index + 1}</span>
-            <span style={{
-                position: 'absolute',
-                bottom: '2px',
-                fontSize: '9px',
-                color: isSelected ? 'rgba(255, 255, 255, 0.8)' : 'var(--glass-text-tertiary)'
-            }}>
-                {framesToTime(clip.durationInFrames, fps)}
-            </span>
+            {/* 工具栏 */}
+            <TimelineToolbar
+                activeTool={timelineState.tool}
+                onToolChange={onToolChange || (() => {})}
+                zoom={timelineState.zoom}
+                onZoomChange={onZoomChange}
+                currentTime={currentTime}
+                totalTime={totalTime}
+            />
 
-            {/* 转场指示器 */}
-            {clip.transition && clip.transition.type !== 'none' && (
-                <div style={{
-                    position: 'absolute',
-                    right: '-6px',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    width: '12px',
-                    height: '12px',
-                    background: 'var(--glass-tone-warning-fg)',
-                    borderRadius: '50%',
-                    fontSize: '8px',
-                    color: 'var(--glass-text-on-accent)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    zIndex: 10
-                }}>
-                    T
+            {/* 标尺 + 轨道区域 */}
+            <div style={{ flex: 1, overflow: 'hidden' }}>
+                {/* 标尺 */}
+                <div style={{ paddingLeft: '60px' }}>
+                    <TimelineRuler
+                        totalFrames={totalDuration}
+                        fps={config.fps}
+                        pixelsPerFrame={pixelsPerFrame}
+                        scrollX={timelineState.scrollX}
+                        width={Math.max(100, containerWidth - 60)}
+                        onSeek={onSeek || (() => {})}
+                    />
                 </div>
-            )}
+
+                {/* 轨道容器 */}
+                <div
+                    style={{
+                        position: 'relative',
+                        cursor: timelineState.tool === 'split' ? 'crosshair' : 'default'
+                    }}
+                    onClick={handleTrackAreaClick}
+                >
+                    {/* 播放头 */}
+                    <div style={{ position: 'absolute', left: '60px', right: 0, top: 0, bottom: 0, pointerEvents: 'none' }}>
+                        <TimelinePlayhead
+                            currentFrame={timelineState.currentFrame}
+                            pixelsPerFrame={pixelsPerFrame}
+                            scrollX={timelineState.scrollX}
+                            height={200}
+                            playing={timelineState.playing}
+                        />
+                    </div>
+
+                    {/* 视频轨道 */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        height: '64px',
+                        borderBottom: '1px solid var(--glass-stroke-base)',
+                    }}>
+                        <span style={{
+                            fontSize: '11px',
+                            color: trackLabel,
+                            width: '60px',
+                            flexShrink: 0,
+                            textAlign: 'center',
+                            fontWeight: 500
+                        }}>
+                            {t('editor.timeline.videoTrack')}
+                        </span>
+
+                        <DndContext
+                            sensors={sensors}
+                            collisionDetection={closestCenter}
+                            onDragEnd={handleDragEnd}
+                        >
+                            <SortableContext
+                                items={clips.map(c => c.id)}
+                                strategy={horizontalListSortingStrategy}
+                            >
+                                <div style={{
+                                    display: 'flex',
+                                    gap: '2px',
+                                    flex: 1,
+                                    overflowX: 'auto',
+                                    padding: '4px 8px',
+                                    transform: `translateX(-${timelineState.scrollX}px)`,
+                                }}>
+                                    {clips.map((clip, index) => (
+                                        <TimelineClipBlock
+                                            key={clip.id}
+                                            clip={clip}
+                                            index={index}
+                                            isSelected={timelineState.selectedClipId === clip.id}
+                                            widthPx={framesToPixels(clip.durationInFrames)}
+                                            fps={config.fps}
+                                            activeTool={timelineState.tool}
+                                            onClick={() => onSelectClip(clip.id)}
+                                            onTrimStart={handleTrimStart}
+                                        />
+                                    ))}
+                                    {clips.length === 0 && (
+                                        <span style={{ fontSize: '12px', color: 'var(--glass-text-tertiary)', padding: '16px' }}>
+                                            {t('editor.timeline.emptyHint')}
+                                        </span>
+                                    )}
+                                </div>
+                            </SortableContext>
+                        </DndContext>
+                    </div>
+
+                    {/* 配音轨道 */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        height: '32px',
+                        borderBottom: '1px solid var(--glass-stroke-base)',
+                    }}>
+                        <span style={{ fontSize: '11px', color: trackLabel, width: '60px', flexShrink: 0, textAlign: 'center' }}>
+                            {t('editor.timeline.audioTrack')}
+                        </span>
+                        <div style={{ display: 'flex', gap: '2px', flex: 1, padding: '2px 8px', transform: `translateX(-${timelineState.scrollX}px)` }}>
+                            {clips.filter(c => c.attachment?.audio).map((clip) => (
+                                <div key={`audio-${clip.id}`} style={{
+                                    width: `${framesToPixels(clip.durationInFrames)}px`,
+                                    minWidth: '20px', height: '22px',
+                                    background: 'var(--glass-tone-success-bg)', borderRadius: '3px',
+                                    fontSize: '9px', color: 'var(--glass-tone-success-fg)',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                                }}>{t('editor.timeline.audioBadge')}</div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* 字幕轨道 */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        height: '32px',
+                        borderBottom: '1px solid var(--glass-stroke-base)',
+                    }}>
+                        <span style={{ fontSize: '11px', color: trackLabel, width: '60px', flexShrink: 0, textAlign: 'center' }}>
+                            {t('editor.timeline.subtitleTrack')}
+                        </span>
+                        <div style={{ display: 'flex', gap: '2px', flex: 1, padding: '2px 8px', transform: `translateX(-${timelineState.scrollX}px)` }}>
+                            {clips.filter(c => c.attachment?.subtitle).map((clip) => (
+                                <div key={`sub-${clip.id}`} style={{
+                                    width: `${framesToPixels(clip.durationInFrames)}px`,
+                                    minWidth: '20px', height: '22px',
+                                    background: 'rgba(59,130,246,0.15)', borderRadius: '3px',
+                                    fontSize: '9px', color: '#3b82f6',
+                                    display: 'flex', alignItems: 'center', padding: '0 4px',
+                                    overflow: 'hidden', whiteSpace: 'nowrap', textOverflow: 'ellipsis', flexShrink: 0
+                                }}>{clip.attachment?.subtitle?.text}</div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* BGM 轨道 */}
+                    <div style={{ display: 'flex', alignItems: 'center', height: '32px' }}>
+                        <span style={{ fontSize: '11px', color: trackLabel, width: '60px', flexShrink: 0, textAlign: 'center' }}>BGM</span>
+                    </div>
+                </div>
+            </div>
         </div>
     )
 }

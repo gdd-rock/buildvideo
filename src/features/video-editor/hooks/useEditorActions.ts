@@ -36,10 +36,12 @@ export function createProjectFromPanels(
         // 查找匹配的配音（简单匹配：按索引）
         const matchedVoice = voiceLines?.[index]
 
+        const durationFrames = Math.round((panel.duration || 10) * 30)
         return {
             id: `clip_${panel.id || panel.storyboardId}_${panel.panelIndex ?? index}`,
             src: panel.videoUrl!,
-            durationInFrames: Math.round((panel.duration || 10) * 30), // 默认 10 秒，30fps
+            durationInFrames: durationFrames,
+            sourceDurationInFrames: durationFrames,
             attachment: {
                 audio: matchedVoice?.audioUrl ? {
                     src: matchedVoice.audioUrl,
@@ -66,7 +68,7 @@ export function createProjectFromPanels(
     return {
         id: `editor_${episodeId}_${Date.now()}`,
         episodeId,
-        schemaVersion: '1.0',
+        schemaVersion: '1.1',
         config: {
             fps: 30,
             width: 1920,

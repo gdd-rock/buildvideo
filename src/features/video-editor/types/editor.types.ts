@@ -1,6 +1,6 @@
 // ========================================
 // Video Editor Core Types
-// Schema Version: 1.0
+// Schema Version: 1.1
 // ========================================
 
 /**
@@ -9,7 +9,7 @@
 export interface VideoEditorProject {
     id: string
     episodeId: string
-    schemaVersion: '1.0'
+    schemaVersion: '1.0' | '1.1'
 
     config: EditorConfig
 
@@ -34,8 +34,14 @@ export interface EditorConfig {
  */
 export interface VideoClip {
     id: string
-    src: string                    // COS URL
+    src: string                    // COS URL (or proxied)
     durationInFrames: number       // 播放时长
+
+    // 素材原始总帧数 (用于裁剪上限)
+    sourceDurationInFrames?: number
+
+    // 变速 (0.25 ~ 4.0, 默认 1.0)
+    speed?: number
 
     // 素材内裁剪 (可选)
     trim?: {
@@ -64,7 +70,10 @@ export interface ClipAttachment {
     }
     subtitle?: {
         text: string
-        style: 'default' | 'cinematic'
+        style: 'default' | 'cinematic' | 'bold' | 'outline'
+        fontSize?: number
+        position?: 'bottom' | 'top' | 'center'
+        color?: string
     }
 }
 
@@ -83,6 +92,8 @@ export interface ClipMetadata {
     panelId: string
     storyboardId: string
     description?: string
+    shotType?: string
+    location?: string
 }
 
 /**
@@ -102,11 +113,15 @@ export interface BgmClip {
 // 时间轴 UI 状态
 // ========================================
 
+export type EditorTool = 'select' | 'trim' | 'split' | 'hand'
+
 export interface TimelineState {
     currentFrame: number
     playing: boolean
     selectedClipId: string | null
     zoom: number                   // 缩放级别 (1 = 100%)
+    scrollX: number                // 水平滚动 (px)
+    tool: EditorTool               // 当前工具
 }
 
 // ========================================

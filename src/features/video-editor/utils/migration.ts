@@ -1,5 +1,5 @@
 import { logWarn as _ulogWarn } from '@/lib/logging/core'
-import { VideoEditorProject } from '../types/editor.types'
+import { VideoEditorProject, VideoClip } from '../types/editor.types'
 
 /**
  * 版本迁移函数
@@ -7,21 +7,32 @@ import { VideoEditorProject } from '../types/editor.types'
  */
 export function migrateProjectData(data: unknown): VideoEditorProject {
     const project = data as Record<string, unknown>
-
-    // 检查 schema 版本
     const version = project.schemaVersion as string
 
     switch (version) {
-        case '1.0':
-            // 当前最新版本，无需迁移
+        case '1.1':
             return project as unknown as VideoEditorProject
 
-        default:
-            // 未知版本或无版本，尝试作为 1.0 处理
-            _ulogWarn(`Unknown schema version: ${version}, treating as 1.0`)
+        case '1.0': {
+            // 1.0 → 1.1: 添加 speed, sourceDurationInFrames, 扩展 TimelineState
+            _ulogWarn('Migrating editor project from 1.0 to 1.1')
+            const timeline = (project.timeline as VideoClip[]).map(clip => ({
+                ...clip,
+                speed: clip.speed ?? 1.0,
+                sourceDurationInFrames: clip.sourceDurationInFrames ?? clip.durationInFrames
+            }))
             return {
                 ...project,
-                schemaVersion: '1.0'
+                schemaVersion: '1.1',
+                timeline
+            } as unknown as VideoEditorProject
+        }
+
+        default:
+            _ulogWarn(`Unknown schema version: ${version}, treating as 1.1`)
+            return {
+                ...project,
+                schemaVersion: '1.1'
             } as VideoEditorProject
     }
 }
@@ -40,8 +51,5 @@ export function validateProjectData(data: unknown): { valid: boolean; errors: st
     if (!Array.isArray(project.timeline)) errors.push('Invalid timeline')
     if (!Array.isArray(project.bgmTrack)) errors.push('Invalid bgmTrack')
 
-    return {
-        valid: errors.length === 0,
-        errors
-    }
+    return { valid: errors.length === 0, errors }
 }

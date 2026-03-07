@@ -175,7 +175,8 @@
       "videoTrack": "Video",
       "emptyHint": "Drag video clips from media library to here",
       "audioTrack": "Voice",
-      "audioBadge": "A"
+      "audioBadge": "A",
+      "subtitleTrack": "Subs"
     },
     "transition": {
       "title": "Transition",
@@ -186,7 +187,23 @@
         "fade": "Fade",
         "slide": "Slide"
       }
-    }
+    },
+    "tools": {
+      "select": "Select",
+      "trim": "Trim",
+      "split": "Split",
+      "hand": "Pan"
+    },
+    "ai": {
+      "smartAssembly": "Smart Assembly",
+      "autoTransitions": "Auto Transitions",
+      "aiCommand": "AI Command",
+      "commandPlaceholder": "Enter command, e.g. \"make it punchier\"...",
+      "unknownCommand": "Unrecognized command"
+    },
+    "undo": "Undo",
+    "redo": "Redo",
+    "speed": "Speed"
   },
   "errors": {
     "unknownError": "Unknown error"

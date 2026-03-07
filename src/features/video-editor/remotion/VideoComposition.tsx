@@ -11,7 +11,7 @@ interface VideoCompositionProps {
 
 /**
  * Remotion 主合成组件
- * 使用 Sequence 实现磁性时间轴布局，支持转场效果
+ * 使用 Sequence 实现磁性时间轴布局，支持转场效果和变速
  */
 export const VideoComposition: React.FC<VideoCompositionProps> = ({
     clips,
@@ -22,7 +22,7 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
 
     return (
         <AbsoluteFill style={{ backgroundColor: 'black' }}>
-            {/* 视频轨道 - 带转场效果 */}
+            {/* 视频轨道 */}
             {computedClips.map((clip, index) => {
                 const transitionDuration = clip.transition?.durationInFrames || 0
 
@@ -62,23 +62,17 @@ export const VideoComposition: React.FC<VideoCompositionProps> = ({
 /**
  * BGM 渲染器 - 支持淡入淡出
  */
-interface BgmRendererProps {
-    bgm: BgmClip
-}
-
-const BgmRenderer: React.FC<BgmRendererProps> = ({ bgm }) => {
+const BgmRenderer: React.FC<{ bgm: BgmClip }> = ({ bgm }) => {
     const frame = useCurrentFrame()
     const fadeIn = bgm.fadeIn || 0
     const fadeOut = bgm.fadeOut || 0
 
     let volume = bgm.volume
 
-    // 淡入
     if (fadeIn > 0 && frame < fadeIn) {
         volume *= interpolate(frame, [0, fadeIn], [0, 1], { extrapolateRight: 'clamp' })
     }
 
-    // 淡出
     if (fadeOut > 0 && frame > bgm.durationInFrames - fadeOut) {
         volume *= interpolate(
             frame,
@@ -92,7 +86,7 @@ const BgmRenderer: React.FC<BgmRendererProps> = ({ bgm }) => {
 }
 
 /**
- * 单个片段渲染器 - 支持转场效果
+ * 单个片段渲染器 - 支持转场效果 + 变速
  */
 interface ClipRendererProps {
     clip: VideoClip & { startFrame: number; endFrame: number }
@@ -104,12 +98,10 @@ interface ClipRendererProps {
 
 const ClipRenderer: React.FC<ClipRendererProps> = ({
     clip,
-    config,
     transitionType = 'none',
     transitionDuration,
     isLastClip
 }) => {
-    void config
     const frame = useCurrentFrame()
     const clipDuration = clip.durationInFrames
 
@@ -118,7 +110,7 @@ const ClipRenderer: React.FC<ClipRendererProps> = ({
     let transform = 'none'
 
     if (transitionType !== 'none' && transitionDuration > 0) {
-        // 出场转场效果 (在片段末尾)
+        // 出场转场效果
         if (!isLastClip && frame > clipDuration - transitionDuration) {
             const exitProgress = interpolate(
                 frame,
@@ -138,7 +130,7 @@ const ClipRenderer: React.FC<ClipRendererProps> = ({
             }
         }
 
-        // 入场转场效果 (在片段开头)
+        // 入场转场效果
         if (frame < transitionDuration) {
             const enterProgress = interpolate(
                 frame,
@@ -161,10 +153,10 @@ const ClipRenderer: React.FC<ClipRendererProps> = ({
 
     return (
         <AbsoluteFill style={{ opacity, transform }}>
-            {/* 视频 */}
             <Video
                 src={clip.src}
                 startFrom={clip.trim?.from || 0}
+                playbackRate={clip.speed || 1}
                 style={{
                     width: '100%',
                     height: '100%',
@@ -172,7 +164,6 @@ const ClipRenderer: React.FC<ClipRendererProps> = ({
                 }}
             />
 
-            {/* 附属配音 */}
             {clip.attachment?.audio && (
                 <Audio
                     src={clip.attachment.audio.src}
@@ -180,11 +171,13 @@ const ClipRenderer: React.FC<ClipRendererProps> = ({
                 />
             )}
 
-            {/* 附属字幕 */}
             {clip.attachment?.subtitle && (
                 <SubtitleOverlay
                     text={clip.attachment.subtitle.text}
                     style={clip.attachment.subtitle.style}
+                    fontSize={clip.attachment.subtitle.fontSize}
+                    position={clip.attachment.subtitle.position}
+                    color={clip.attachment.subtitle.color}
                 />
             )}
         </AbsoluteFill>
@@ -196,36 +189,66 @@ const ClipRenderer: React.FC<ClipRendererProps> = ({
  */
 interface SubtitleOverlayProps {
     text: string
-    style: 'default' | 'cinematic'
+    style: 'default' | 'cinematic' | 'bold' | 'outline'
+    fontSize?: number
+    position?: 'bottom' | 'top' | 'center'
+    color?: string
 }
 
-const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({ text, style }) => {
-    const styles = {
+const SubtitleOverlay: React.FC<SubtitleOverlayProps> = ({
+    text,
+    style,
+    fontSize,
+    position = 'bottom',
+    color
+}) => {
+    const baseSize = fontSize || (style === 'cinematic' ? 28 : 24)
+    const textColor = color || 'white'
+
+    const styles: Record<string, React.CSSProperties> = {
         default: {
             background: 'rgba(0, 0, 0, 0.7)',
             padding: '8px 16px',
             borderRadius: '4px',
-            fontSize: '24px',
-            color: 'white'
+            fontSize: `${baseSize}px`,
+            color: textColor
         },
         cinematic: {
             background: 'transparent',
             padding: '12px 24px',
-            fontSize: '28px',
-            color: 'white',
+            fontSize: `${baseSize}px`,
+            color: textColor,
             textShadow: '2px 2px 4px rgba(0, 0, 0, 0.8)',
             fontWeight: 'bold' as const
+        },
+        bold: {
+            background: 'rgba(0, 0, 0, 0.6)',
+            padding: '10px 20px',
+            borderRadius: '6px',
+            fontSize: `${baseSize}px`,
+            color: textColor,
+            fontWeight: 'bold' as const,
+            letterSpacing: '1px'
+        },
+        outline: {
+            background: 'transparent',
+            padding: '8px 16px',
+            fontSize: `${baseSize}px`,
+            color: textColor,
+            WebkitTextStroke: '1px rgba(0,0,0,0.8)',
+            textShadow: '0 0 8px rgba(0,0,0,0.5)'
         }
     }
 
+    const positionStyle: React.CSSProperties = {
+        justifyContent: position === 'top' ? 'flex-start' : position === 'center' ? 'center' : 'flex-end',
+        alignItems: 'center',
+        paddingTop: position === 'top' ? '60px' : undefined,
+        paddingBottom: position === 'bottom' ? '60px' : undefined
+    }
+
     return (
-        <AbsoluteFill
-            style={{
-                justifyContent: 'flex-end',
-                alignItems: 'center',
-                paddingBottom: '60px'
-            }}
-        >
+        <AbsoluteFill style={positionStyle}>
             <div style={styles[style]}>
                 {text}
             </div>
