@@ -16,18 +16,23 @@ export default function EditorStageRoute() {
     const panels = storyboards.flatMap((sb) =>
       (sb.panels || [])
         .filter((p) => p.videoUrl)
-        .map((p) => ({
-          id: p.id,
-          panelIndex: p.panelIndex,
-          storyboardId: sb.id,
-          videoUrl: p.videoUrl ?? undefined,
-          description: p.description ?? undefined,
-          duration: p.duration ?? undefined,
-        })),
+        .map((p) => {
+          // 将视频 URL 通过同源代理，避免 Remotion 跨域问题
+          const rawUrl = p.videoUrl ?? ''
+          const proxiedUrl = `/api/novel-promotion/${projectId}/video-proxy?key=${encodeURIComponent(rawUrl)}`
+          return {
+            id: p.id,
+            panelIndex: p.panelIndex,
+            storyboardId: sb.id,
+            videoUrl: proxiedUrl,
+            description: p.description ?? undefined,
+            duration: p.duration ?? undefined,
+          }
+        }),
     )
     if (panels.length === 0) return undefined
     return createProjectFromPanels(episodeId || '', panels)
-  }, [storyboards, episodeId])
+  }, [storyboards, episodeId, projectId])
 
   if (!episodeId) return null
 

@@ -6,8 +6,23 @@ import { apiHandler, ApiError } from '@/lib/api-errors'
 import { assertAllowedMediaUrl } from '@/lib/security/url-validator'
 
 /**
+ * CORS 预检请求支持（Remotion Player 需要）
+ */
+export async function OPTIONS() {
+    return new Response(null, {
+        status: 204,
+        headers: {
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+            'Access-Control-Allow-Headers': 'Content-Type, Range',
+            'Access-Control-Max-Age': '86400',
+        },
+    })
+}
+
+/**
  * 代理下载单个视频文件
- * 用于解决 COS 跨域下载问题
+ * 用于解决 COS 跨域下载问题，同时供 Remotion Player 同源加载
  */
 export const GET = apiHandler(async (
     request: NextRequest,
@@ -45,10 +60,14 @@ export const GET = apiHandler(async (
     const contentType = response.headers.get('content-type') || 'video/mp4'
     const contentLength = response.headers.get('content-length')
 
-    // 流式返回视频数据
+    // 流式返回视频数据（含 CORS 支持，供 Remotion Player 使用）
     const headers: HeadersInit = {
         'Content-Type': contentType,
-        'Cache-Control': 'no-cache'
+        'Cache-Control': 'public, max-age=3600',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, HEAD, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Range',
+        'Access-Control-Expose-Headers': 'Content-Length, Content-Range',
     }
     if (contentLength) {
         headers['Content-Length'] = contentLength
