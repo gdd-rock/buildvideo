@@ -17,14 +17,16 @@ export default function EditorStageRoute() {
       (sb.panels || [])
         .filter((p) => p.videoUrl)
         .map((p) => {
-          // 将视频 URL 通过同源代理，避免 Remotion 跨域问题
           const rawUrl = p.videoUrl ?? ''
-          const proxiedUrl = `/api/novel-promotion/${projectId}/video-proxy?key=${encodeURIComponent(rawUrl)}`
+          // /m/ 路径已是同源媒体路由，直接使用；外部 URL 走代理避免 CORS
+          const videoUrl = rawUrl.startsWith('/m/')
+            ? rawUrl
+            : `/api/novel-promotion/${projectId}/video-proxy?key=${encodeURIComponent(rawUrl)}`
           return {
             id: p.id,
             panelIndex: p.panelIndex,
             storyboardId: sb.id,
-            videoUrl: proxiedUrl,
+            videoUrl,
             description: p.description ?? undefined,
             duration: p.duration ?? undefined,
           }
